@@ -2,6 +2,7 @@ import { useState, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 import { waLink } from "@/lib/contact";
+import { saveBooking } from "@/lib/admin-store";
 
 const vehicles = ["Car (Sedan)", "KDH Van", "SUV", "Luxury Car", "Mini Bus", "Tourist Coach"];
 
@@ -23,6 +24,7 @@ export function BookingForm() {
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    try { saveBooking(form); } catch {}
     const msg = `ආයුබෝවන් 🙏 අග්‍රා ටැක්සි වෙත සාදරයෙන් පිලිගනිමු
 
 *New Booking Inquiry*
