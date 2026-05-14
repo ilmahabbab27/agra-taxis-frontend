@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { waLink } from "@/lib/contact";
 
 export function WhatsAppFloat() {
@@ -15,7 +15,7 @@ export function WhatsAppFloat() {
       aria-label="Chat on WhatsApp"
     >
       <span className="absolute inset-0 rounded-full bg-whatsapp animate-ping opacity-30" />
-      <MessageCircle className="w-7 h-7 relative" />
+      <WhatsAppIcon className="w-7 h-7 relative" />
     </motion.a>
   );
 }

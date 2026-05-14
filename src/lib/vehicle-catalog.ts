@@ -1,0 +1,313 @@
+export type VehicleCategory = string;
+
+export type StayPrices = {
+  day1: number;
+  day2: number;
+  day3: number;
+  day4: number;
+  day5: number;
+};
+
+export type VehicleCatalogItem = {
+  id?: number;
+  name: string;
+  category: VehicleCategory;
+  img: string;
+  seats: number;
+  acPricePerKm: number;
+  nonAcPricePerKm: number;
+  acAvailable: boolean;
+  nonAcAvailable: boolean;
+  stayPrices?: StayPrices;
+  isCustom?: boolean;
+};
+
+export type VehicleFormInput = Omit<VehicleCatalogItem, "isCustom">;
+
+export const vehicleCategories: Array<"All" | VehicleCategory> = [
+  "All",
+  "Cars",
+  "Vans",
+  "SUVs",
+  "Luxury",
+  "Mini Buses",
+  "Buses",
+];
+
+export const vehicles: VehicleCatalogItem[] = [
+  {
+    name: "Toyota Axio / Premio",
+    category: "Cars",
+    img: "/assets/car.jpg",
+    seats: 4,
+    acPricePerKm: 180,
+    nonAcPricePerKm: 150,
+    acAvailable: true,
+    nonAcAvailable: true,
+    stayPrices: { day1: 3500, day2: 6500, day3: 9000, day4: 11500, day5: 14000 },
+  },
+  {
+    name: "Toyota KDH Van",
+    category: "Vans",
+    img: "/assets/van.jpg",
+    seats: 9,
+    acPricePerKm: 240,
+    nonAcPricePerKm: 210,
+    acAvailable: true,
+    nonAcAvailable: true,
+    stayPrices: { day1: 5000, day2: 9500, day3: 13500, day4: 17000, day5: 20000 },
+  },
+  {
+    name: "Toyota Land Cruiser",
+    category: "SUVs",
+    img: "/assets/suv.jpg",
+    seats: 6,
+    acPricePerKm: 320,
+    nonAcPricePerKm: 0,
+    acAvailable: true,
+    nonAcAvailable: false,
+    stayPrices: { day1: 6500, day2: 12000, day3: 17000, day4: 22000, day5: 26000 },
+  },
+  {
+    name: "Mercedes-Benz E-Class",
+    category: "Luxury",
+    img: "/assets/luxury.jpg",
+    seats: 4,
+    acPricePerKm: 420,
+    nonAcPricePerKm: 0,
+    acAvailable: true,
+    nonAcAvailable: false,
+    stayPrices: { day1: 9000, day2: 17000, day3: 24000, day4: 30000, day5: 35000 },
+  },
+  {
+    name: "Coaster Mini Bus",
+    category: "Mini Buses",
+    img: "/assets/minibus.jpg",
+    seats: 22,
+    acPricePerKm: 360,
+    nonAcPricePerKm: 320,
+    acAvailable: true,
+    nonAcAvailable: true,
+    stayPrices: { day1: 8000, day2: 15000, day3: 21000, day4: 27000, day5: 32000 },
+  },
+  {
+    name: "Tourist Coach",
+    category: "Buses",
+    img: "/assets/bus.jpg",
+    seats: 45,
+    acPricePerKm: 520,
+    nonAcPricePerKm: 460,
+    acAvailable: true,
+    nonAcAvailable: true,
+    stayPrices: { day1: 12000, day2: 22000, day3: 31000, day4: 39000, day5: 46000 },
+  },
+];
+
+const CUSTOM_VEHICLES_KEY = "agra_custom_vehicles_v1";
+const DELETED_VEHICLES_KEY = "agra_deleted_vehicles_v1";
+const CUSTOM_CATEGORIES_KEY = "agra_custom_vehicle_categories_v1";
+const DEFAULT_API_BASE = "http://localhost/Agra%20Taxis%20Backend/public/api";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE).replace(/\/$/, "");
+
+export function getVehicles() {
+  const deletedVehicleNames = getDeletedVehicleNames();
+  return [
+    ...vehicles.filter((vehicle) => !deletedVehicleNames.includes(vehicle.name)),
+    ...getCustomVehicles(),
+  ];
+}
+
+export function getVehicleCategories(): Array<"All" | VehicleCategory> {
+  const names = [
+    ...vehicleCategories.filter((category) => category !== "All"),
+    ...getCustomCategories(),
+    ...getVehicles().map((vehicle) => vehicle.category),
+  ];
+  return ["All", ...Array.from(new Set(names.filter(Boolean)))];
+}
+
+export async function getVehiclesFromDatabase() {
+  const response = await fetch(`${API_BASE}/vehicles`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("Vehicle API request failed");
+  const payload = await response.json();
+  if (!Array.isArray(payload.data)) return [];
+  return payload.data.map(normalizeApiVehicle) as VehicleCatalogItem[];
+}
+
+export async function getVehicleCategoriesFromDatabase(): Promise<Array<"All" | VehicleCategory>> {
+  const response = await fetch(`${API_BASE}/vehicle-categories`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("Vehicle categories API request failed");
+  const payload = await response.json();
+  const categories = Array.isArray(payload.data)
+    ? payload.data.filter((category: unknown): category is string => typeof category === "string")
+    : [];
+  return ["All", ...Array.from(new Set(categories))];
+}
+
+export async function saveVehicleToDatabase(vehicle: VehicleFormInput, id?: number) {
+  const response = await fetch(id ? `${API_BASE}/vehicles/${id}` : `${API_BASE}/vehicles`, {
+    method: id ? "PUT" : "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(normalizeVehicle(vehicle)),
+  });
+  if (!response.ok) throw new Error("Save vehicle API request failed");
+  const payload = await response.json();
+  return normalizeApiVehicle(payload.data) as VehicleCatalogItem;
+}
+
+export async function deleteVehicleFromDatabase(vehicle: VehicleCatalogItem) {
+  if (!vehicle.id) {
+    deleteVehicle(vehicle.name);
+    return;
+  }
+  const response = await fetch(`${API_BASE}/vehicles/${vehicle.id}`, {
+    method: "DELETE",
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("Delete vehicle API request failed");
+}
+
+export async function saveCategoryToDatabase(category: string) {
+  const response = await fetch(`${API_BASE}/vehicle-categories`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ name: category.trim() }),
+  });
+  if (!response.ok) throw new Error("Save category API request failed");
+  return response.json();
+}
+
+export function getCustomCategories() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CUSTOM_CATEGORIES_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((category): category is string => typeof category === "string");
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomCategory(category: string) {
+  const normalized = category.trim();
+  if (!normalized) return getCustomCategories();
+  const next = Array.from(new Set([...getCustomCategories(), normalized]));
+  localStorage.setItem(CUSTOM_CATEGORIES_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function getCustomVehicles() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CUSTOM_VEHICLES_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((vehicle) => ({ ...vehicle, isCustom: true })) as VehicleCatalogItem[];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomVehicle(vehicle: VehicleFormInput) {
+  const normalized = normalizeVehicle(vehicle);
+  const customVehicles = getCustomVehicles().filter((item) => item.name !== normalized.name);
+  const next = [...customVehicles, { ...normalized, isCustom: true }];
+  const deletedVehicleNames = getDeletedVehicleNames();
+  if (vehicles.some((item) => item.name === normalized.name)) {
+    setDeletedVehicleNames([...deletedVehicleNames, normalized.name]);
+  }
+  localStorage.setItem(CUSTOM_VEHICLES_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function deleteCustomVehicle(name: string) {
+  const next = getCustomVehicles().filter((vehicle) => vehicle.name !== name);
+  localStorage.setItem(CUSTOM_VEHICLES_KEY, JSON.stringify(next));
+  return next;
+}
+
+export function deleteVehicle(name: string) {
+  deleteCustomVehicle(name);
+  if (vehicles.some((vehicle) => vehicle.name === name)) {
+    setDeletedVehicleNames([...getDeletedVehicleNames(), name]);
+  }
+}
+
+export function getVehicleByName(name: string, source: VehicleCatalogItem[] = getVehicles()) {
+  return source.find((vehicle) => vehicle.name === name) || source[0] || vehicles[0];
+}
+
+export function getPricePerKm(vehicle: VehicleCatalogItem, ac: string) {
+  return ac === "Non AC" ? vehicle.nonAcPricePerKm : vehicle.acPricePerKm;
+}
+
+export function formatLkr(value: number) {
+  return `Rs. ${Math.round(value).toLocaleString("en-LK")}`;
+}
+
+function getDeletedVehicleNames() {
+  if (typeof window === "undefined") return [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DELETED_VEHICLES_KEY) || "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((name): name is string => typeof name === "string");
+  } catch {
+    return [];
+  }
+}
+
+function setDeletedVehicleNames(names: string[]) {
+  const uniqueNames = Array.from(new Set(names));
+  localStorage.setItem(DELETED_VEHICLES_KEY, JSON.stringify(uniqueNames));
+}
+
+function normalizeStayPrices(raw: unknown): StayPrices {
+  const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return {
+    day1: Math.max(0, Number(s.day1) || 0),
+    day2: Math.max(0, Number(s.day2) || 0),
+    day3: Math.max(0, Number(s.day3) || 0),
+    day4: Math.max(0, Number(s.day4) || 0),
+    day5: Math.max(0, Number(s.day5) || 0),
+  };
+}
+
+function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
+  const acAvailable = vehicle.acAvailable || !vehicle.nonAcAvailable;
+  return {
+    ...vehicle,
+    name: vehicle.name.trim(),
+    category: vehicle.category.trim() || "Cars",
+    img: vehicle.img.trim() || "/assets/car.jpg",
+    seats: Math.max(1, Number(vehicle.seats) || 1),
+    acPricePerKm: acAvailable ? Math.max(0, Number(vehicle.acPricePerKm) || 0) : 0,
+    nonAcPricePerKm: vehicle.nonAcAvailable ? Math.max(0, Number(vehicle.nonAcPricePerKm) || 0) : 0,
+    acAvailable,
+    nonAcAvailable: vehicle.nonAcAvailable,
+    stayPrices: vehicle.stayPrices ? normalizeStayPrices(vehicle.stayPrices) : undefined,
+  };
+}
+
+function normalizeApiVehicle(vehicle: Partial<VehicleCatalogItem>) {
+  return {
+    id: vehicle.id,
+    name: String(vehicle.name || ""),
+    category: String(vehicle.category || "Cars"),
+    img: String(vehicle.img || "/assets/car.jpg"),
+    seats: Math.max(1, Number(vehicle.seats) || 1),
+    acPricePerKm: Math.max(0, Number(vehicle.acPricePerKm) || 0),
+    nonAcPricePerKm: Math.max(0, Number(vehicle.nonAcPricePerKm) || 0),
+    acAvailable: Boolean(vehicle.acAvailable),
+    nonAcAvailable: Boolean(vehicle.nonAcAvailable),
+    stayPrices: vehicle.stayPrices ? normalizeStayPrices(vehicle.stayPrices) : undefined,
+  };
+}

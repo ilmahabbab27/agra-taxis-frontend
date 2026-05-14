@@ -67,7 +67,11 @@
 
   --gradient-gold: linear-gradient(135deg, oklch(0.88 0.17 90), oklch(0.78 0.18 75));
   --gradient-dark: linear-gradient(135deg, oklch(0.22 0.02 260), oklch(0.15 0.02 260));
-  --gradient-hero: linear-gradient(180deg, oklch(0.15 0.02 260 / 0.3) 0%, oklch(0.15 0.02 260 / 0.85) 100%);
+  --gradient-hero: linear-gradient(
+    180deg,
+    oklch(0.15 0.02 260 / 0.3) 0%,
+    oklch(0.15 0.02 260 / 0.85) 100%
+  );
   --shadow-soft: 0 4px 20px -4px oklch(0.22 0.02 260 / 0.08);
   --shadow-card: 0 10px 30px -10px oklch(0.22 0.02 260 / 0.15);
   --shadow-gold: 0 10px 30px -10px oklch(0.84 0.17 90 / 0.5);
@@ -75,24 +79,51 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html { scroll-behavior: smooth; }
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
-  :lang(si), .font-sinhala { font-family: var(--font-sinhala); }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+  :lang(si),
+  .font-sinhala {
+    font-family: var(--font-sinhala);
+  }
 }
 
 @layer utilities {
-  .bg-gradient-gold { background: var(--gradient-gold); }
-  .bg-gradient-dark { background: var(--gradient-dark); }
-  .bg-gradient-hero { background: var(--gradient-hero); }
-  .shadow-soft { box-shadow: var(--shadow-soft); }
-  .shadow-card { box-shadow: var(--shadow-card); }
-  .shadow-gold { box-shadow: var(--shadow-gold); }
-  .text-balance { text-wrap: balance; }
+  .bg-gradient-gold {
+    background: var(--gradient-gold);
+  }
+  .bg-gradient-dark {
+    background: var(--gradient-dark);
+  }
+  .bg-gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+  .shadow-gold {
+    box-shadow: var(--shadow-gold);
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
 }

@@ -2,8 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Lock, ArrowLeft } from "lucide-react";
-import logo from "@/assets/logo.jpg";
 import { adminLogin, isAdminAuthed } from "@/lib/admin-store";
+
+const logo = "/assets/logo.jpg";
 
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
@@ -61,7 +62,7 @@ function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 bg-background border border-border rounded-xl text-charcoal focus:outline-none focus:ring-2 focus:ring-gold"
-              placeholder="admin@agrataxis.lk"
+              placeholder="admin"
             />
           </label>
           <label className="block">

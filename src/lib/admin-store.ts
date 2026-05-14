@@ -9,6 +9,17 @@ export type Booking = {
   trip: string;
   pax: string;
   ac: string;
+  pickupLat?: string;
+  pickupLng?: string;
+  destinationLat?: string;
+  destinationLng?: string;
+  distanceKm?: string;
+  distanceSource?: "route" | "straight";
+  vehicleCategory?: string;
+  vehicleSeats?: string;
+  pricePerKm?: string;
+  estimatedFare?: string;
+  mapUrl?: string;
   status: "new" | "contacted" | "confirmed" | "cancelled";
 };
 

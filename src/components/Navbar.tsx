@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Menu, X, Phone } from "lucide-react";
-import logo from "@/assets/logo.jpg";
 import { PHONE, PHONE_DISPLAY } from "@/lib/contact";
 
+const logo = "/assets/logo.jpg";
+
 const links = [
-  { href: "#home", label: "Home" },
-  { href: "#about", label: "About" },
-  { href: "#services", label: "Services" },
-  { href: "#fleet", label: "Fleet" },
-  { href: "#booking", label: "Booking" },
-  { href: "#contact", label: "Contact" },
+  { to: "/", label: "Home" },
+  { to: "/about", label: "About" },
+  { to: "/services", label: "Services" },
+  { to: "/fleet", label: "Vehicles" },
+  { to: "/booking", label: "Booking" },
+  { to: "/contact", label: "Contact" },
 ];
 
 export function Navbar() {
@@ -33,18 +34,20 @@ export function Navbar() {
       }`}
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 md:h-20 flex items-center justify-between">
-        <a href="#home" className="flex items-center gap-2">
-          <img src={logo} alt="Agra Taxis" className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover" />
-          <span className={`font-display font-bold text-lg md:text-xl ${scrolled ? "text-charcoal" : "text-white"}`}>
-            Agra Taxis
-          </span>
+        <a href="/" className="flex items-center gap-2">
+          <img
+            src={logo}
+            alt="Agra Taxis"
+            className="h-10 md:h-12 w-auto object-contain"
+          />
+         
         </a>
 
         <div className="hidden lg:flex items-center gap-8">
           {links.map((l) => (
             <a
-              key={l.href}
-              href={l.href}
+              key={l.to}
+              href={l.to}
               className={`text-sm font-medium transition-colors hover:text-gold ${
                 scrolled ? "text-charcoal" : "text-white"
               }`}
@@ -81,8 +84,8 @@ export function Navbar() {
           <div className="px-4 py-4 flex flex-col gap-1">
             {links.map((l) => (
               <a
-                key={l.href}
-                href={l.href}
+                key={l.to}
+                href={l.to}
                 onClick={() => setOpen(false)}
                 className="px-3 py-3 rounded-lg text-charcoal font-medium hover:bg-secondary"
               >

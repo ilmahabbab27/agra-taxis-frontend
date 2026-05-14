@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Phone } from "lucide-react";
-import hero from "@/assets/hero.jpg";
+import { Phone } from "lucide-react";
+import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { PHONE, waLink } from "@/lib/contact";
+
+const hero = "/assets/hero.jpg";
 
 export function Hero() {
   return (
@@ -42,7 +44,7 @@ export function Hero() {
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-whatsapp text-white font-semibold px-6 py-4 rounded-full shadow-card hover:scale-[1.03] transition-transform"
             >
-              <MessageCircle className="w-5 h-5" />
+              <WhatsAppIcon className="w-5 h-5" />
               Book via WhatsApp
             </a>
             <a
