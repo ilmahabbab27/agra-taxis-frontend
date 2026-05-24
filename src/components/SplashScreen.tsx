@@ -7,7 +7,7 @@ export function SplashScreen() {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(false), 2500);
+    const timer = setTimeout(() => setVisible(false), 1200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -24,7 +24,7 @@ export function SplashScreen() {
           <motion.div
             initial={{ scale: 0.7, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
             className="flex flex-col items-center gap-6"
           >
             <img
@@ -37,12 +37,7 @@ export function SplashScreen() {
             </p>
           </motion.div>
 
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "6rem" }}
-            transition={{ delay: 0.6, duration: 1.2, ease: "easeInOut" }}
-            className="absolute bottom-16 h-0.5 bg-gradient-to-r from-transparent via-yellow-400 to-transparent rounded-full"
-          />
+          <div className="absolute bottom-16 h-px w-24 bg-gold/60" />
         </motion.div>
       )}
     </AnimatePresence>

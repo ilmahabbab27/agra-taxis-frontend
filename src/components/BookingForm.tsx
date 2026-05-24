@@ -207,15 +207,12 @@ Thank you!`;
   }
 
   const inputCls = (field?: keyof typeof form) =>
-    `w-full px-4 py-3 bg-background border rounded-xl text-charcoal focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all ${
+    `w-full px-4 py-3 bg-white border rounded-lg text-charcoal focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all shadow-soft text-sm font-medium ${
       field && errors[field] ? "border-red-400" : "border-border"
     }`;
 
   return (
     <section id="booking" className="py-20 lg:py-28 bg-gradient-dark relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
-
       <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -227,8 +224,8 @@ Thank you!`;
           <span className="text-gold font-semibold uppercase tracking-wider text-sm">
             Booking Inquiry
           </span>
-          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-balance">
-            Reserve Your Vehicle in Seconds
+          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold text-white text-balance">
+            Request a Vehicle Reservation
           </h2>
           <p className="mt-4 text-white/70 text-lg">
             Fill in your trip details, check pricing, then reserve on WhatsApp.
@@ -241,7 +238,7 @@ Thank you!`;
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mt-10 bg-card rounded-3xl p-6 sm:p-8 lg:p-10 shadow-card"
+          className="mt-10 bg-white rounded-2xl p-6 sm:p-8 lg:p-10 shadow-card border border-border"
         >
           <div className="grid sm:grid-cols-2 gap-5">
             <Field label="Required Vehicle">
@@ -349,7 +346,7 @@ Thank you!`;
           <button
             type="submit"
             disabled={!selectedVehicle}
-            className="mt-7 w-full inline-flex items-center justify-center gap-2 bg-gradient-gold text-gold-foreground font-semibold py-4 rounded-xl shadow-gold hover:scale-[1.02] transition-all text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            className="mt-7 w-full inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground font-bold py-4 rounded-lg hover:bg-gold/90 transition-all uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-soft"
           >
             Check Pricing
           </button>
@@ -364,9 +361,12 @@ Thank you!`;
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
               transition={{ duration: 0.4 }}
-              className="mt-6 bg-card rounded-3xl p-6 sm:p-8 shadow-card border border-gold/30"
+              className="mt-6 bg-charcoal text-white rounded-2xl p-6 sm:p-8 shadow-card border border-gold/20 relative overflow-hidden"
             >
-              <h3 className="text-lg font-bold text-charcoal mb-5">Trip Summary</h3>
+              <h3 className="text-lg font-bold text-white mb-5 border-b border-white/10 pb-3 flex items-center justify-between">
+                <span>Trip Summary Details</span>
+                <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Agra Connect</span>
+              </h3>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                 <SummaryRow label="Vehicle" value={summary.vehicle} />
@@ -396,31 +396,31 @@ Thank you!`;
                 />
               </div>
 
-              <div className="mt-5 rounded-2xl bg-gradient-dark px-6 py-4 flex items-center justify-between">
-                <span className="text-white/70 font-medium">Estimated Fare</span>
+              <div className="mt-6 rounded-lg border-2 border-dashed border-white/10 bg-white/5 px-6 py-4 flex items-center justify-between">
+                <span className="text-white/60 font-semibold text-sm">Estimated Total Fare</span>
                 <span className="text-2xl font-bold text-gold">
-                  {summary.estimatedFare ? formatLkr(summary.estimatedFare) : "—"}
+                  {summary.estimatedFare ? formatLkr(summary.estimatedFare) : "Pending"}
                 </span>
               </div>
 
               {!summary.distanceKm && (
-                <p className="mt-3 flex items-center gap-2 text-xs text-amber-600">
+                <p className="mt-3 flex items-center gap-2 text-xs text-amber-400">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   Pin your pickup and destination on the map above for an accurate fare estimate.
                 </p>
               )}
 
-              <div className="mt-5 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4 flex gap-3">
-                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  <span className="font-semibold">Please note:</span> All prices shown are estimates and may vary slightly depending on the situation, route, or additional requirements. Please contact our hotline via a phone call or WhatsApp to get the exact pricing before confirming your booking.
+              <div className="mt-5 rounded-lg bg-white/5 border border-white/10 px-5 py-4 flex gap-3">
+                <AlertCircle className="w-4 h-4 text-gold shrink-0 mt-0.5" />
+                <p className="text-xs text-white/70 leading-relaxed">
+                  <strong className="text-white font-semibold">Verification Notice:</strong> All fares are automated estimates. Final invoices may vary depending on road conditions, tolls, and custom itinerary requests. Establish contact via phone or WhatsApp to finalize your B2B/standard booking agreement.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={reserveOnWhatsApp}
-                className="mt-5 w-full inline-flex items-center justify-center gap-2 bg-whatsapp hover:bg-whatsapp/90 text-white font-semibold py-4 rounded-xl shadow-card transition-all text-base"
+                className="mt-6 w-full inline-flex items-center justify-center gap-2 bg-whatsapp hover:bg-whatsapp/90 text-white font-bold py-4 rounded-lg shadow-card transition-all text-sm uppercase tracking-wider cursor-pointer"
               >
                 <WhatsAppIcon className="w-5 h-5" />
                 Reserve on WhatsApp
@@ -457,11 +457,11 @@ function Field({
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl bg-secondary px-4 py-3">
-      <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-lg bg-white/5 border border-white/5 px-4 py-3">
+      <span className="block text-[10px] font-bold uppercase tracking-wider text-gold">
         {label}
       </span>
-      <span className="mt-0.5 block font-semibold text-charcoal">{value}</span>
+      <span className="mt-0.5 block font-semibold text-white text-sm">{value}</span>
     </div>
   );
 }

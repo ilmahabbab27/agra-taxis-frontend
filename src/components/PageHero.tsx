@@ -24,7 +24,7 @@ export function PageHero({ image, title, subtitle }: PageHeroProps) {
         <span className="text-gold font-semibold uppercase tracking-widest text-sm">
           Agra Taxis
         </span>
-        <h1 className="mt-3 text-4xl sm:text-5xl md:text-6xl font-bold text-white">
+        <h1 className="mt-3 text-4xl sm:text-5xl md:text-6xl font-semibold text-white leading-tight">
           {title}
         </h1>
         <p className="mt-4 text-white/70 text-lg max-w-xl mx-auto">{subtitle}</p>

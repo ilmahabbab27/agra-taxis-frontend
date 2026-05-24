@@ -2,11 +2,11 @@ import { motion } from "framer-motion";
 import { Globe2, Zap, BadgeDollarSign, Award, Clock } from "lucide-react";
 
 const items = [
-  { icon: Globe2, title: "Islandwide Service", desc: "Coverage across all 9 provinces of Sri Lanka", stat: "9/9" },
-  { icon: Zap, title: "Fast Response", desc: "Reply within minutes, any time of day", stat: "<5 min" },
-  { icon: BadgeDollarSign, title: "Affordable Rates", desc: "Best prices with no hidden charges", stat: "Best" },
-  { icon: Award, title: "Experienced Drivers", desc: "Trained, licensed and courteous chauffeurs", stat: "10+ yrs" },
-  { icon: Clock, title: "24/7 Support", desc: "Always available — day or night", stat: "24/7" },
+  { icon: Globe2, title: "Islandwide Network", desc: "SLA-backed route coverage across all 9 provinces.", stat: "National" },
+  { icon: Zap, title: "Rapid Response", desc: "Dedicated dispatch coordinators active 24/7.", stat: "<5 Min" },
+  { icon: BadgeDollarSign, title: "Corporate Billing", desc: "Transparent billing with structured tax invoices.", stat: "Auditable" },
+  { icon: Award, title: "Chauffeur Standards", desc: "Vetted, English-speaking professional drivers.", stat: "Certified" },
+  { icon: Clock, title: "Operations Desk", desc: "Constant flight-tracking and fleet monitoring.", stat: "24/7 SLA" },
 ];
 
 export function WhyChooseUs() {
@@ -15,12 +15,15 @@ export function WhyChooseUs() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-2xl mx-auto">
           <span className="text-gold font-semibold uppercase tracking-wider text-sm">Why Choose Us</span>
-          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold text-charcoal text-balance">
-            The Smart Way to Travel Sri Lanka
+          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold text-charcoal text-balance">
+            The Executive Transport Standard
           </h2>
+          <p className="mt-4 text-muted-foreground text-base">
+            Providing reliable and compliant business travel, logistics operations, and private transit solutions across Sri Lanka.
+          </p>
         </div>
 
-        <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="mt-14 grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {items.map((it, i) => (
             <motion.div
               key={it.title}
@@ -28,14 +31,16 @@ export function WhyChooseUs() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.08 }}
-              className="bg-card rounded-2xl p-6 text-center shadow-soft hover:shadow-card hover:-translate-y-1 transition-all border border-border"
+              className="bg-card rounded-lg p-6 text-center shadow-soft hover-lift transition-all border border-border flex flex-col justify-between"
             >
-              <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-gold flex items-center justify-center shadow-gold">
-                <it.icon className="w-7 h-7 text-gold-foreground" />
+              <div>
+                <div className="mx-auto w-11 h-11 rounded-md bg-accent flex items-center justify-center">
+                  <it.icon className="w-5 h-5 text-gold-foreground" />
+                </div>
+                <div className="mt-5 text-3xl font-extrabold text-charcoal tracking-tight">{it.stat}</div>
+                <h3 className="mt-2 font-semibold text-charcoal text-base">{it.title}</h3>
               </div>
-              <div className="mt-4 text-2xl font-bold text-charcoal">{it.stat}</div>
-              <h3 className="mt-1 font-semibold text-charcoal">{it.title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{it.desc}</p>
+              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">{it.desc}</p>
             </motion.div>
           ))}
         </div>

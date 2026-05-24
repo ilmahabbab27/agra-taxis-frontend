@@ -181,8 +181,8 @@ function AdminDashboard() {
     setIsVehicleDialogOpen(false);
   }
 
-  function onLogout() {
-    adminLogout();
+  async function onLogout() {
+    await adminLogout();
     navigate({ to: "/admin/login" });
   }
 

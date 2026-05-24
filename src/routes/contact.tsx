@@ -8,7 +8,7 @@ import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact Us — Agra Taxis" },
+      { title: "Contact Us - Agra Taxis" },
       {
         name: "description",
         content:
@@ -27,7 +27,7 @@ function ContactPage() {
         <PageHero
           image="/assets/suv.jpg"
           title="Contact Us"
-          subtitle="Available 24/7 — call, WhatsApp or email us to plan your journey."
+          subtitle="Available 24/7. Call, WhatsApp, or email us to plan your journey."
         />
         <Contact />
       </main>

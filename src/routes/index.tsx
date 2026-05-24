@@ -15,13 +15,13 @@ import { SplashScreen } from "@/components/SplashScreen";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Agra Taxis — Reliable Vehicle Rental & Taxi Service in Sri Lanka" },
+      { title: "Agra Taxis - Reliable Vehicle Rental & Taxi Service in Sri Lanka" },
       {
         name: "description",
         content:
           "Agra Taxis offers islandwide vehicle rental and taxi service in Sri Lanka. Airport transfers, tours, weddings, staff transport. Book via WhatsApp 24/7.",
       },
-      { property: "og:title", content: "Agra Taxis — Sri Lanka's Trusted Transport Service" },
+      { property: "og:title", content: "Agra Taxis - Sri Lanka's Trusted Transport Service" },
       { property: "og:description", content: "Islandwide taxi & vehicle rental. AC vans, cars, SUVs, luxury & buses. Call 072 300 3000." },
       { property: "og:type", content: "website" },
     ],
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600&family=Noto+Sans+Sinhala:wght@400;500;600;700&display=swap",
       },
     ],
   }),

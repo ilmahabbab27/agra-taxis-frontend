@@ -6,8 +6,8 @@ const features = [
   { icon: MapPin, title: "Islandwide Coverage", desc: "Travel anywhere, any time" },
   { icon: UserCheck, title: "Professional Drivers", desc: "Experienced, courteous, licensed" },
   { icon: Snowflake, title: "AC & Non-AC Vehicles", desc: "Comfort tailored to your budget" },
-  { icon: Wallet, title: "Affordable Pricing", desc: "Transparent rates, no hidden fees" },
-  { icon: Heart, title: "Safe & Comfortable", desc: "Your safety is our top priority" },
+  { icon: Wallet, title: "Transparent Pricing", desc: "Clear rates with no hidden fees" },
+  { icon: Heart, title: "Safe & Comfortable", desc: "Well-maintained vehicles for every trip" },
 ];
 
 export function About() {
@@ -22,17 +22,17 @@ export function About() {
             transition={{ duration: 0.6 }}
           >
             <span className="text-gold font-semibold uppercase tracking-wider text-sm">About Us</span>
-            <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold text-charcoal text-balance">
-              Sri Lanka's Premium Transport & Tour Partner
+            <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold text-charcoal text-balance">
+              Sri Lanka's Premium Transport and Tour Partner
             </h2>
             <p className="mt-6 text-muted-foreground text-lg leading-relaxed">
-              Agra Taxis offers a complete fleet of comfortable cars, vans, SUVs, and luxury vehicles
-              with experienced drivers who know every corner of the island. Whether you're heading
-              to the airport, exploring tea country, or moving your team — we deliver a smooth,
-              safe and affordable journey.
+              Agra Taxis operates a complete fleet of comfortable cars, vans, SUVs, and luxury vehicles
+              with experienced drivers who know every corner of the island. Whether you are heading
+              to the airport, exploring tea country, or moving your team, we deliver a smooth,
+              safe, and affordable journey.
             </p>
-            <div className="mt-8 inline-flex items-center gap-3 bg-secondary px-5 py-3 rounded-full">
-              <div className="w-2.5 h-2.5 bg-whatsapp rounded-full animate-pulse" />
+            <div className="mt-8 inline-flex items-center gap-3 border border-border bg-secondary px-5 py-3 rounded-md">
+              <div className="w-2.5 h-2.5 bg-whatsapp rounded-sm" />
               <span className="text-sm font-medium text-charcoal">Available 24/7 across Sri Lanka</span>
             </div>
           </motion.div>
@@ -45,9 +45,9 @@ export function About() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.4, delay: i * 0.07 }}
-                className="bg-card border border-border rounded-2xl p-5 shadow-soft hover:shadow-card hover:-translate-y-1 transition-all"
+                className="bg-card border border-border rounded-lg p-5 shadow-soft hover:border-gold/40 transition-colors"
               >
-                <div className="w-11 h-11 rounded-xl bg-gradient-gold flex items-center justify-center shadow-gold">
+                <div className="w-10 h-10 rounded-md bg-accent flex items-center justify-center">
                   <f.icon className="w-5 h-5 text-gold-foreground" />
                 </div>
                 <h3 className="mt-4 font-semibold text-charcoal">{f.title}</h3>

@@ -5,17 +5,16 @@ import { waLink } from "@/lib/contact";
 export function WhatsAppFloat() {
   return (
     <motion.a
-      href={waLink("Hello Agra Taxis 🙏 I'd like to make an inquiry.")}
+      href={waLink("Hello Agra Taxis, I'd like to make an inquiry.")}
       target="_blank"
       rel="noopener noreferrer"
-      initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={{ delay: 1, type: "spring" }}
-      className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-whatsapp text-white shadow-card flex items-center justify-center hover:scale-110 transition-transform"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.8, duration: 0.25 }}
+      className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-lg bg-whatsapp text-white shadow-card flex items-center justify-center hover:bg-whatsapp/90 transition-colors"
       aria-label="Chat on WhatsApp"
     >
-      <span className="absolute inset-0 rounded-full bg-whatsapp animate-ping opacity-30" />
-      <WhatsAppIcon className="w-7 h-7 relative" />
+      <WhatsAppIcon className="w-7 h-7" />
     </motion.a>
   );
 }

@@ -23,6 +23,10 @@ export type Booking = {
   status: "new" | "contacted" | "confirmed" | "cancelled";
 };
 
+// ---------------------------------------------------------------------------
+// Local booking helpers (kept for offline fallback / optimistic UI)
+// ---------------------------------------------------------------------------
+
 const KEY = "agra_bookings_v1";
 
 export function getBookings(): Booking[] {
@@ -56,23 +60,71 @@ export function deleteBooking(id: string) {
   localStorage.setItem(KEY, JSON.stringify(all));
 }
 
-// Simple frontend-only admin gate. Replace with real auth via Lovable Cloud.
-const ADMIN_PASSWORD = "agra2026";
-const AUTH_KEY = "agra_admin_auth";
+// ---------------------------------------------------------------------------
+// API-backed admin authentication (Laravel Sanctum)
+// ---------------------------------------------------------------------------
+
+import { API_BASE } from "@/lib/api";
+
+const TOKEN_KEY = "agra_admin_token";
+
+export function getAdminToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+}
 
 export function isAdminAuthed(): boolean {
-  if (typeof window === "undefined") return false;
-  return sessionStorage.getItem(AUTH_KEY) === "1";
+  return !!getAdminToken();
 }
 
-export function adminLogin(email: string, password: string): boolean {
-  if (password === ADMIN_PASSWORD && email.includes("@")) {
-    sessionStorage.setItem(AUTH_KEY, "1");
-    return true;
+/**
+ * Calls POST /api/admin/login and stores the Sanctum token on success.
+ * Returns { ok: true } or { ok: false, message: string }.
+ */
+export async function adminLogin(
+  email: string,
+  password: string
+): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/admin/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      return { ok: false, message: data?.message ?? "Invalid email or password." };
+    }
+
+    sessionStorage.setItem(TOKEN_KEY, data.token);
+    return { ok: true };
+  } catch {
+    return { ok: false, message: "Unable to reach server. Please try again." };
   }
-  return false;
 }
 
-export function adminLogout() {
-  sessionStorage.removeItem(AUTH_KEY);
+/**
+ * Calls POST /api/admin/logout (best-effort) then clears the local token.
+ */
+export async function adminLogout(): Promise<void> {
+  const token = getAdminToken();
+  if (token) {
+    try {
+      await fetch(`${API_BASE}/admin/logout`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
+    } catch {
+      // ignore – we'll clear locally regardless
+    }
+  }
+  sessionStorage.removeItem(TOKEN_KEY);
 }

@@ -10,11 +10,11 @@ import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About Us — Agra Taxis" },
+      { title: "About Us - Agra Taxis" },
       {
         name: "description",
         content:
-          "Learn about Agra Taxis — Sri Lanka's trusted vehicle rental and taxi service. Professional drivers, islandwide coverage, available 24/7.",
+          "Learn about Agra Taxis - Sri Lanka's trusted vehicle rental and taxi service. Professional drivers, islandwide coverage, available 24/7.",
       },
     ],
   }),
@@ -29,7 +29,7 @@ function AboutPage() {
         <PageHero
           image="/assets/hero.jpg"
           title="About Us"
-          subtitle="Sri Lanka's trusted vehicle rental and taxi service — professional drivers, islandwide coverage, 24/7."
+          subtitle="Sri Lanka's trusted vehicle rental and taxi service, with professional drivers, islandwide coverage, and 24/7 availability."
         />
         <About />
         <WhyChooseUs />

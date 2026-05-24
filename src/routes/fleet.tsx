@@ -8,11 +8,11 @@ import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 export const Route = createFileRoute("/fleet")({
   head: () => ({
     meta: [
-      { title: "Our Vehicles — Agra Taxis" },
+      { title: "Our Vehicles - Agra Taxis" },
       {
         name: "description",
         content:
-          "Browse Agra Taxis' full fleet — cars, vans, SUVs, luxury vehicles and buses. AC and Non-AC options with transparent per-km pricing.",
+          "Browse Agra Taxis' full fleet - cars, vans, SUVs, luxury vehicles and buses. AC and Non-AC options with transparent per-km pricing.",
       },
     ],
   }),
@@ -27,7 +27,7 @@ function FleetPage() {
         <PageHero
           image="/assets/van.jpg"
           title="Our Vehicles"
-          subtitle="Cars, vans, SUVs, luxury vehicles and buses — AC & Non-AC with transparent per-km pricing."
+          subtitle="Cars, vans, SUVs, luxury vehicles, and buses with AC and Non-AC options."
         />
         <Fleet />
       </main>

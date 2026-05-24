@@ -22,13 +22,13 @@ export function Testimonials() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <span className="text-gold font-semibold uppercase tracking-wider text-sm">Testimonials</span>
-          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-bold text-charcoal text-balance">
+          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold text-charcoal text-balance">
             What Our Customers Say
           </h2>
         </div>
 
         <div className="mt-12 relative">
-          <div className="bg-card rounded-3xl p-8 sm:p-12 shadow-card border border-border min-h-[280px] relative overflow-hidden">
+          <div className="bg-card rounded-lg p-8 sm:p-12 shadow-card border border-border min-h-[280px] relative overflow-hidden">
             <Quote className="absolute top-6 right-6 w-20 h-20 text-gold/10" />
             <AnimatePresence mode="wait">
               <motion.div
@@ -55,7 +55,7 @@ export function Testimonials() {
           <div className="mt-6 flex items-center justify-between">
             <button
               onClick={() => setI((p) => (p - 1 + reviews.length) % reviews.length)}
-              className="w-11 h-11 rounded-full bg-secondary hover:bg-accent flex items-center justify-center transition-colors"
+              className="w-11 h-11 rounded-md bg-secondary hover:bg-accent flex items-center justify-center transition-colors"
               aria-label="Previous"
             >
               <ChevronLeft className="w-5 h-5 text-charcoal" />
@@ -65,14 +65,14 @@ export function Testimonials() {
                 <button
                   key={k}
                   onClick={() => setI(k)}
-                  className={`h-2 rounded-full transition-all ${k === i ? "w-8 bg-gold" : "w-2 bg-border"}`}
+                  className={`h-2 rounded-sm transition-all ${k === i ? "w-8 bg-gold" : "w-2 bg-border"}`}
                   aria-label={`Go to ${k + 1}`}
                 />
               ))}
             </div>
             <button
               onClick={() => setI((p) => (p + 1) % reviews.length)}
-              className="w-11 h-11 rounded-full bg-secondary hover:bg-accent flex items-center justify-center transition-colors"
+              className="w-11 h-11 rounded-md bg-secondary hover:bg-accent flex items-center justify-center transition-colors"
               aria-label="Next"
             >
               <ChevronRight className="w-5 h-5 text-charcoal" />
