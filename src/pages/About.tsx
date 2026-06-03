@@ -1,0 +1,27 @@
+import { Navbar } from "@/components/Navbar";
+import { PageHero } from "@/components/PageHero";
+import { About } from "@/components/About";
+import { WhyChooseUs } from "@/components/WhyChooseUs";
+import { Testimonials } from "@/components/Testimonials";
+import { Footer } from "@/components/Footer";
+import { WhatsAppFloat } from "@/components/WhatsAppFloat";
+
+export default function AboutPage() {
+  return (
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <Navbar />
+      <main>
+        <PageHero
+          image="/assets/hero.jpg"
+          title="About Us"
+          subtitle="Sri Lanka's trusted vehicle rental and taxi service, with professional drivers, islandwide coverage, and 24/7 availability."
+        />
+        <About />
+        <WhyChooseUs />
+        <Testimonials />
+      </main>
+      <Footer />
+      <WhatsAppFloat />
+    </div>
+  );
+}

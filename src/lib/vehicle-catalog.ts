@@ -34,74 +34,7 @@ export const vehicleCategories: Array<"All" | VehicleCategory> = [
   "Buses",
 ];
 
-export const vehicles: VehicleCatalogItem[] = [
-  {
-    name: "Toyota Axio / Premio",
-    category: "Cars",
-    img: "/assets/car.jpg",
-    seats: 4,
-    acPricePerKm: 180,
-    nonAcPricePerKm: 150,
-    acAvailable: true,
-    nonAcAvailable: true,
-    stayPrices: { day1: 3500, day2: 6500, day3: 9000, day4: 11500, day5: 14000 },
-  },
-  {
-    name: "Toyota KDH Van",
-    category: "Vans",
-    img: "/assets/van.jpg",
-    seats: 9,
-    acPricePerKm: 240,
-    nonAcPricePerKm: 210,
-    acAvailable: true,
-    nonAcAvailable: true,
-    stayPrices: { day1: 5000, day2: 9500, day3: 13500, day4: 17000, day5: 20000 },
-  },
-  {
-    name: "Toyota Land Cruiser",
-    category: "SUVs",
-    img: "/assets/suv.jpg",
-    seats: 6,
-    acPricePerKm: 320,
-    nonAcPricePerKm: 0,
-    acAvailable: true,
-    nonAcAvailable: false,
-    stayPrices: { day1: 6500, day2: 12000, day3: 17000, day4: 22000, day5: 26000 },
-  },
-  {
-    name: "Mercedes-Benz E-Class",
-    category: "Luxury",
-    img: "/assets/luxury.jpg",
-    seats: 4,
-    acPricePerKm: 420,
-    nonAcPricePerKm: 0,
-    acAvailable: true,
-    nonAcAvailable: false,
-    stayPrices: { day1: 9000, day2: 17000, day3: 24000, day4: 30000, day5: 35000 },
-  },
-  {
-    name: "Coaster Mini Bus",
-    category: "Mini Buses",
-    img: "/assets/minibus.jpg",
-    seats: 22,
-    acPricePerKm: 360,
-    nonAcPricePerKm: 320,
-    acAvailable: true,
-    nonAcAvailable: true,
-    stayPrices: { day1: 8000, day2: 15000, day3: 21000, day4: 27000, day5: 32000 },
-  },
-  {
-    name: "Tourist Coach",
-    category: "Buses",
-    img: "/assets/bus.jpg",
-    seats: 45,
-    acPricePerKm: 520,
-    nonAcPricePerKm: 460,
-    acAvailable: true,
-    nonAcAvailable: true,
-    stayPrices: { day1: 12000, day2: 22000, day3: 31000, day4: 39000, day5: 46000 },
-  },
-];
+export const vehicles: VehicleCatalogItem[] = [];
 
 const CUSTOM_VEHICLES_KEY = "agra_custom_vehicles_v1";
 const DELETED_VEHICLES_KEY = "agra_deleted_vehicles_v1";
@@ -297,12 +230,23 @@ function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
   };
 }
 
+const BACKEND_ORIGIN = API_BASE.replace(/\/api$/, "");
+
+function resolveImgUrl(img: unknown): string {
+  const raw = String(img || "");
+  if (!raw) return "/assets/car.jpg";
+  if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://")) return raw;
+  // uploaded vehicle image served from the backend public folder
+  if (raw.startsWith("/vehicles/") || raw.startsWith("/storage/")) return BACKEND_ORIGIN + raw;
+  return raw;
+}
+
 function normalizeApiVehicle(vehicle: Partial<VehicleCatalogItem>) {
   return {
     id: vehicle.id,
     name: String(vehicle.name || ""),
     category: String(vehicle.category || "Cars"),
-    img: String(vehicle.img || "/assets/car.jpg"),
+    img: resolveImgUrl(vehicle.img),
     seats: Math.max(1, Number(vehicle.seats) || 1),
     acPricePerKm: Math.max(0, Number(vehicle.acPricePerKm) || 0),
     nonAcPricePerKm: Math.max(0, Number(vehicle.nonAcPricePerKm) || 0),

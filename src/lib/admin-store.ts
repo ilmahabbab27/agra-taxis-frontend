@@ -95,13 +95,15 @@ export async function adminLogin(
       body: JSON.stringify({ email, password }),
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data: { token?: string; message?: string } = {};
+    try { data = JSON.parse(text); } catch { /* non-JSON response */ }
 
     if (!res.ok) {
-      return { ok: false, message: data?.message ?? "Invalid email or password." };
+      return { ok: false, message: data?.message ?? `Server error ${res.status}: ${text.slice(0, 200)}` };
     }
 
-    sessionStorage.setItem(TOKEN_KEY, data.token);
+    sessionStorage.setItem(TOKEN_KEY, data.token ?? "");
     return { ok: true };
   } catch {
     return { ok: false, message: "Unable to reach server. Please try again." };

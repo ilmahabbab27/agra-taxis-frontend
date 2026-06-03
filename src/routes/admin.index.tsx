@@ -1,7 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { Car, Download, LogOut, Pencil, Plus } from "lucide-react";
 import { adminLogout, isAdminAuthed } from "@/lib/admin-store";
+import { API_BASE } from "@/lib/api";
 import {
   deleteVehicle,
   deleteVehicleFromDatabase,
@@ -39,12 +40,7 @@ import {
 
 const logo = "/assets/logo.jpg";
 
-export const Route = createFileRoute("/admin/")({
-  head: () => ({
-    meta: [{ title: "Admin Dashboard - Agra Taxis" }, { name: "robots", content: "noindex" }],
-  }),
-  component: AdminDashboard,
-});
+export { AdminDashboard as default };
 
 const adminInputClass =
   "w-full rounded-xl border border-border bg-background px-3 py-3 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60";
@@ -77,10 +73,11 @@ function AdminDashboard() {
   const [seatFilter, setSeatFilter] = useState("all");
   const [comfortFilter, setComfortFilter] = useState<"all" | "ac" | "nonAc">("all");
   const [ready, setReady] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
 
   useEffect(() => {
     if (!isAdminAuthed()) {
-      navigate({ to: "/admin/login" });
+      navigate("/admin/login");
       return;
     }
     void refreshVehicles();
@@ -112,14 +109,31 @@ function AdminDashboard() {
     }));
   }
 
-  function onVehicleImageUpload(file: File | undefined) {
+  async function onVehicleImageUpload(file: File | undefined) {
     if (!file || !file.type.startsWith("image/")) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") updateVehicleForm("img", reader.result);
-    };
-    reader.readAsDataURL(file);
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const response = await fetch(`${API_BASE}/vehicles/image`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Image upload failed");
+      const payload = await response.json() as { url: string };
+      const fullUrl = API_BASE.replace(/\/api$/, "") + payload.url;
+      updateVehicleForm("img", fullUrl);
+    } catch {
+      // fallback: embed as base64 if upload fails
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") updateVehicleForm("img", reader.result);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setImageUploading(false);
+    }
   }
 
   async function onVehicleSubmit(event: FormEvent) {
@@ -183,7 +197,7 @@ function AdminDashboard() {
 
   async function onLogout() {
     await adminLogout();
-    navigate({ to: "/admin/login" });
+    navigate("/admin/login");
   }
 
   function exportJson() {
@@ -478,9 +492,13 @@ function AdminDashboard() {
                     <input
                       type="file"
                       accept="image/*"
+                      disabled={imageUploading}
                       onChange={(event) => onVehicleImageUpload(event.target.files?.[0])}
-                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white"
+                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white disabled:opacity-60"
                     />
+                    {imageUploading && (
+                      <p className="mt-1 text-xs text-muted-foreground">Uploading image…</p>
+                    )}
                   </AdminField>
                 </div>
               </div>
