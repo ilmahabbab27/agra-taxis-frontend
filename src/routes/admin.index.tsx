@@ -24,7 +24,6 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -235,199 +234,191 @@ function AdminDashboard() {
   if (!ready) return null;
 
   return (
-    <div className="min-h-screen bg-secondary/40">
-      <header className="sticky top-0 z-30 bg-charcoal text-white shadow-card">
+    <div className="min-h-screen bg-[#f0f2f5]">
+      {/* Premium header */}
+      <header className="sticky top-0 z-30 border-b border-white/5 bg-charcoal text-white shadow-card">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="Agra Taxis" className="h-9 w-9 rounded-full" />
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-gold/20 blur-sm opacity-0 transition-opacity group-hover:opacity-100" />
+              <img src={logo} alt="Agra Taxis" className="relative h-9 w-9 rounded-full object-cover ring-1 ring-gold/30" />
+            </div>
             <div>
-              <div className="font-display font-bold leading-tight">Agra Taxis</div>
-              <div className="text-[10px] uppercase tracking-wider text-gold">Admin</div>
+              <div className="font-display text-sm font-bold leading-tight tracking-tight">Agra Taxis</div>
+              <div className="text-[9px] uppercase tracking-[0.2em] text-gold/70">Admin Dashboard</div>
             </div>
           </Link>
           <div className="flex items-center gap-2">
             <button
               onClick={exportJson}
-              className="inline-flex items-center gap-2 rounded-full bg-gold/20 px-4 py-2 text-sm font-medium text-gold transition-colors hover:bg-gold/30"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gold/25 bg-gold/8 px-3 py-1.5 text-xs font-semibold text-gold/90 transition-all hover:border-gold/40 hover:bg-gold/15"
             >
-              <Download className="h-4 w-4" /> Export JSON
+              <Download className="h-3.5 w-3.5" /> Export
             </button>
             <button
               onClick={onLogout}
-              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/20"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-white/70 transition-all hover:border-white/15 hover:bg-white/8 hover:text-white"
             >
-              <LogOut className="h-4 w-4" /> Logout
+              <LogOut className="h-3.5 w-3.5" /> Logout
             </button>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+
+        {/* Page title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-charcoal sm:text-3xl">Vehicle Management</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage public vehicle categories, seats, images, and per-kilometer rates.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal">Fleet Management</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Manage vehicles, categories and pricing shown on the public site.</p>
         </div>
 
-        <section className="rounded-2xl border border-border bg-card p-5 shadow-soft">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-charcoal">Vehicles</h2>
-              <p className="text-sm text-muted-foreground">
-                Add, update, delete, search, and filter vehicles shown on the public site.
-              </p>
+        {/* Stats row */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Total Vehicles", value: adminVehicles.length, accent: false },
+            { label: "Categories", value: categoryOptions.filter(c => c !== "All").length, accent: false },
+            { label: "AC Available", value: adminVehicles.filter(v => v.acAvailable).length, accent: false },
+            { label: "Filtered Results", value: filteredVehicles.length, accent: true },
+          ].map(({ label, value, accent }) => (
+            <div key={label} className={`rounded-xl border px-4 py-3.5 ${accent ? "border-gold/20 bg-gold/5" : "border-border bg-white shadow-soft"}`}>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+              <p className={`mt-1 text-3xl font-bold ${accent ? "text-gold" : "text-charcoal"}`}>{value}</p>
             </div>
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-charcoal">
-              <Car className="h-4 w-4" />
-              {filteredVehicles.length} of {adminVehicles.length} vehicles
-            </span>
-          </div>
+          ))}
+        </div>
 
-          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <button
-              type="button"
-              onClick={openAddVehicleDialog}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90"
-            >
-              <Plus className="h-4 w-4" />
-              Add Vehicle
-            </button>
-            <form
-              onSubmit={onCategorySubmit}
-              className="flex flex-col gap-2 sm:flex-row sm:items-center"
-            >
-              <input
-                value={newCategory}
-                onChange={(event) => setNewCategory(event.target.value)}
-                placeholder="New category"
-                className="w-full rounded-xl border border-border bg-background px-3 py-3 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold sm:w-56"
-              />
+        <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+          {/* Section toolbar */}
+          <div className="flex flex-col gap-3 border-b border-border bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-bold text-charcoal">Vehicles</h2>
+              <p className="text-xs text-muted-foreground">{adminVehicles.length} vehicles across {categoryOptions.filter(c => c !== "All").length} categories</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <form onSubmit={onCategorySubmit} className="flex gap-2">
+                <input
+                  value={newCategory}
+                  onChange={(event) => setNewCategory(event.target.value)}
+                  placeholder="New category..."
+                  className="w-36 rounded-lg border border-border bg-[#f0f2f5] px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20"
+                />
+                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[#f4f5f7] px-3 py-2 text-sm font-semibold text-charcoal hover:bg-accent transition-colors">
+                  <Plus className="h-3.5 w-3.5" /> Category
+                </button>
+              </form>
               <button
-                type="submit"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-charcoal hover:bg-accent"
+                type="button"
+                onClick={openAddVehicleDialog}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               >
-                <Plus className="h-4 w-4" />
-                Add Category
+                <Plus className="h-3.5 w-3.5" /> Add Vehicle
               </button>
-            </form>
+            </div>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search vehicles or categories..."
-              className={adminInputClass}
-            />
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className={adminInputClass}
-            >
-              {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category === "All" ? "All categories" : category}
-                </option>
-              ))}
-            </select>
-            <select
-              value={seatFilter}
-              onChange={(event) => setSeatFilter(event.target.value)}
-              className={adminInputClass}
-            >
-              <option value="all">All seats</option>
-              {seatOptions.map((seats) => (
-                <option key={seats} value={seats}>
-                  {seats} seats
-                </option>
-              ))}
-            </select>
-            <select
-              value={comfortFilter}
-              onChange={(event) => setComfortFilter(event.target.value as typeof comfortFilter)}
-              className={adminInputClass}
-            >
-              <option value="all">All comfort</option>
-              <option value="ac">AC available</option>
-              <option value="nonAc">Non AC available</option>
-            </select>
+          {/* Filters */}
+          <div className="grid gap-2 border-b border-border bg-[#f8f9fb] px-5 py-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              <input
+                key="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search vehicles..."
+                className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20"
+              />,
+              <select key="cat" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20">
+                {categoryOptions.map((category) => (
+                  <option key={category} value={category}>{category === "All" ? "All categories" : category}</option>
+                ))}
+              </select>,
+              <select key="seats" value={seatFilter} onChange={(event) => setSeatFilter(event.target.value)} className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20">
+                <option value="all">All seats</option>
+                {seatOptions.map((seats) => <option key={seats} value={seats}>{seats} seats</option>)}
+              </select>,
+              <select key="comfort" value={comfortFilter} onChange={(event) => setComfortFilter(event.target.value as typeof comfortFilter)} className="rounded-lg border border-border bg-white px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20">
+                <option value="all">All comfort</option>
+                <option value="ac">AC only</option>
+                <option value="nonAc">Non-AC only</option>
+              </select>,
+            ]}
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {filteredVehicles.map((vehicle) => (
-              <div key={vehicle.name} className="rounded-xl border border-border bg-secondary p-3">
-                <div className="grid grid-cols-[92px_1fr] gap-3">
-                  <div className="aspect-[4/3] overflow-hidden rounded-lg border border-border bg-background">
-                    <img
-                      src={vehicle.img}
-                      alt={vehicle.name}
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold text-charcoal">{vehicle.name}</div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          {vehicle.category} - {vehicle.seats} seats
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => editVehicle(vehicle)}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-charcoal hover:bg-accent"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setVehicleToDelete(vehicle)}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
+          {/* Vehicle grid */}
+          <div className="p-5">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredVehicles.map((vehicle) => (
+                <div key={vehicle.name} className="group overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card">
+                  <div className="relative h-44 overflow-hidden bg-secondary">
+                    <img src={vehicle.img} alt={vehicle.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent" />
+                    <div className="absolute top-2.5 right-2.5 flex gap-1">
+                      {vehicle.acAvailable && <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-bold text-charcoal shadow-sm">AC</span>}
+                      {vehicle.nonAcAvailable && <span className="rounded-full border border-white/30 bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">NON-AC</span>}
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <span>
-                        AC:{" "}
-                        {vehicle.acAvailable ? `${formatLkr(vehicle.acPricePerKm)} / km` : "N/A"}
-                      </span>
-                      <span>
-                        Non AC:{" "}
-                        {vehicle.nonAcAvailable
-                          ? `${formatLkr(vehicle.nonAcPricePerKm)} / km`
-                          : "N/A"}
-                      </span>
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <p className="truncate text-sm font-bold leading-tight text-white drop-shadow-sm">{vehicle.name}</p>
+                      <p className="mt-0.5 text-[11px] text-white/65">{vehicle.category} · {vehicle.seats} seats</p>
+                    </div>
+                  </div>
+                  <div className="p-3.5">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="rounded-lg bg-[#f8f9fb] px-2.5 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">AC / km</p>
+                        <p className="mt-0.5 font-bold text-charcoal">{vehicle.acAvailable ? formatLkr(vehicle.acPricePerKm) : "—"}</p>
+                      </div>
+                      <div className="rounded-lg bg-[#f8f9fb] px-2.5 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Non-AC / km</p>
+                        <p className="mt-0.5 font-bold text-charcoal">{vehicle.nonAcAvailable ? formatLkr(vehicle.nonAcPricePerKm) : "—"}</p>
+                      </div>
                     </div>
                     {vehicle.stayPrices && (
-                      <div className="mt-2 rounded-lg bg-background border border-border px-2 py-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                          Stay charges
-                        </p>
-                        <div className="grid grid-cols-5 gap-1 text-[10px] text-charcoal text-center">
+                      <div className="mt-2 rounded-lg border border-border bg-[#f8f9fb] px-2.5 py-2">
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Stay charges</p>
+                        <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
                           {([1, 2, 3, 4, 5] as const).map((d) => (
-                            <div key={d}>
-                              <div className="font-semibold">D{d}</div>
-                              <div>{formatLkr(vehicle.stayPrices![`day${d}` as keyof StayPrices])}</div>
+                            <div key={d} className="rounded-md bg-white py-1 shadow-soft">
+                              <div className="font-bold text-gold">D{d}</div>
+                              <div className="text-charcoal">{formatLkr(vehicle.stayPrices![`day${d}` as keyof StayPrices])}</div>
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => editVehicle(vehicle)}
+                        className="rounded-lg border border-border bg-white py-2 text-xs font-semibold text-charcoal transition-all hover:border-charcoal/20 hover:bg-charcoal hover:text-white"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVehicleToDelete(vehicle)}
+                        className="rounded-lg border border-red-100 bg-red-50/50 py-2 text-xs font-semibold text-red-500 transition-all hover:border-red-200 hover:bg-red-100"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          {filteredVehicles.length === 0 && (
-            <div className="mt-5 rounded-xl border border-border bg-secondary p-8 text-center text-sm text-muted-foreground">
-              No vehicles match these filters.
+              ))}
             </div>
-          )}
+
+            {filteredVehicles.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="mb-4 rounded-full border border-border bg-[#f8f9fb] p-5">
+                  <Car className="h-8 w-8 text-muted-foreground/40" />
+                </div>
+                <p className="font-semibold text-charcoal">No vehicles found</p>
+                <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filters or add a new vehicle.</p>
+                <button onClick={openAddVehicleDialog} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
+                  <Plus className="h-3.5 w-3.5" /> Add Vehicle
+                </button>
+              </div>
+            )}
+          </div>
         </section>
 
         <Dialog
@@ -437,14 +428,17 @@ function AdminDashboard() {
             else setIsVehicleDialogOpen(true);
           }}
         >
-          <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto rounded-2xl">
-            <DialogHeader>
-              <DialogTitle>{editingVehicleName ? "Update Vehicle" : "Add Vehicle"}</DialogTitle>
-              <DialogDescription>
-                Manage category, image preview, seats, and separate AC / Non AC pricing.
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto rounded-2xl p-0">
+            {/* Dialog header */}
+            <div className="border-b border-border px-6 py-5">
+              <DialogTitle className="text-lg font-bold text-charcoal">
+                {editingVehicleName ? "Update Vehicle" : "Add New Vehicle"}
+              </DialogTitle>
+              <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
+                {editingVehicleName ? `Editing ${editingVehicleName}` : "Fill in the details below to add a vehicle to the fleet."}
               </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={onVehicleSubmit} className="grid gap-4 sm:grid-cols-2">
+            </div>
+            <form onSubmit={onVehicleSubmit} className="grid gap-5 p-6 sm:grid-cols-2">
               <AdminField label="Vehicle Name" className="sm:col-span-2">
                 <input
                   required
@@ -463,9 +457,7 @@ function AdminDashboard() {
                   {categoryOptions
                     .filter((category) => category !== "All")
                     .map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
+                      <option key={category} value={category}>{category}</option>
                     ))}
                 </select>
               </AdminField>
@@ -479,27 +471,36 @@ function AdminDashboard() {
                   className={adminInputClass}
                 />
               </AdminField>
-              <div className="grid gap-3 rounded-xl bg-secondary p-3 sm:col-span-2 sm:grid-cols-[160px_1fr]">
-                <div className="aspect-[4/3] overflow-hidden rounded-xl border border-border bg-background">
-                  <img
-                    src={vehicleForm.img}
-                    alt={vehicleForm.name || "Vehicle preview"}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="grid content-center gap-3">
-                  <AdminField label="Vehicle Image">
+
+              {/* Image section */}
+              <div className="sm:col-span-2 rounded-xl border border-border bg-[#f8f9fb] p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Image</p>
+                <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-white shadow-soft">
+                    <img
+                      src={vehicleForm.img}
+                      alt={vehicleForm.name || "Preview"}
+                      className="h-full w-full object-cover"
+                    />
+                    {imageUploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+                          <span className="text-xs font-medium text-charcoal">Uploading…</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-col justify-center gap-3">
+                    <p className="text-sm text-muted-foreground">Upload a clear photo of the vehicle. JPG, PNG or WebP, max 5MB.</p>
                     <input
                       type="file"
                       accept="image/*"
                       disabled={imageUploading}
                       onChange={(event) => onVehicleImageUpload(event.target.files?.[0])}
-                      className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white disabled:opacity-60"
+                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
                     />
-                    {imageUploading && (
-                      <p className="mt-1 text-xs text-muted-foreground">Uploading image…</p>
-                    )}
-                  </AdminField>
+                  </div>
                 </div>
               </div>
               <div className="grid gap-3 rounded-xl border border-border p-3">

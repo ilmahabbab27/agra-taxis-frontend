@@ -207,27 +207,35 @@ Thank you!`;
   }
 
   const inputCls = (field?: keyof typeof form) =>
-    `w-full px-4 py-3 bg-white border rounded-lg text-charcoal focus:outline-none focus:ring-2 focus:ring-gold focus:border-transparent transition-all shadow-soft text-sm font-medium ${
-      field && errors[field] ? "border-red-400" : "border-border"
+    `w-full px-4 py-3.5 bg-white border rounded-xl text-charcoal text-sm font-medium outline-none transition-all placeholder-charcoal/30 focus:ring-2 focus:ring-gold/30 focus:border-gold/50 ${
+      field && errors[field] ? "border-red-400 bg-red-50/30" : "border-border hover:border-charcoal/20"
     }`;
 
   return (
-    <section id="booking" className="py-20 lg:py-28 bg-gradient-dark relative overflow-hidden">
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="booking" className="relative overflow-hidden bg-[#0e0f11] py-24 lg:py-32">
+      {/* Subtle grid pattern */}
+      <div className="pointer-events-none absolute inset-0 opacity-5" style={{ backgroundImage: "linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px)", backgroundSize: "60px 60px" }} />
+      {/* Gold glow */}
+      <div className="pointer-events-none absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/10 blur-3xl" />
+
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <span className="text-gold font-semibold uppercase tracking-wider text-sm">
-            Booking Inquiry
-          </span>
-          <h2 className="mt-3 text-3xl sm:text-4xl lg:text-5xl font-semibold text-white text-balance">
-            Request a Vehicle Reservation
+          <div className="inline-flex items-center gap-3">
+            <span className="h-px w-6 bg-gold" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Booking Inquiry</span>
+            <span className="h-px w-6 bg-gold" />
+          </div>
+          <h2 className="mt-5 text-balance text-4xl font-black leading-tight tracking-tight text-white sm:text-5xl">
+            Request a Vehicle
+            <span className="block text-white/30">Reservation</span>
           </h2>
-          <p className="mt-4 text-white/70 text-lg">
+          <p className="mt-4 text-base text-white/45">
             Fill in your trip details, check pricing, then reserve on WhatsApp.
           </p>
         </motion.div>
@@ -237,10 +245,14 @@ Thank you!`;
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-10 bg-white rounded-2xl p-6 sm:p-8 lg:p-10 shadow-card border border-border"
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mt-12 overflow-hidden rounded-3xl border border-white/8 bg-white/4 backdrop-blur-sm"
         >
-          <div className="grid sm:grid-cols-2 gap-5">
+          {/* Form header */}
+          <div className="border-b border-white/8 px-6 py-5 sm:px-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/30">Step 1 — Trip Details</p>
+          </div>
+          <div className="grid gap-5 p-6 sm:grid-cols-2 sm:p-10">
             <Field label="Required Vehicle">
               <select
                 required
@@ -343,13 +355,18 @@ Thank you!`;
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={!selectedVehicle}
-            className="mt-7 w-full inline-flex items-center justify-center gap-2 bg-gold text-gold-foreground font-bold py-4 rounded-lg hover:bg-gold/90 transition-all uppercase tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-soft"
-          >
-            Check Pricing
-          </button>
+          <div className="px-6 pb-6 sm:px-10 sm:pb-10">
+            <button
+              type="submit"
+              disabled={!selectedVehicle}
+              className="w-full inline-flex items-center justify-center gap-2.5 rounded-xl bg-gold py-4 text-sm font-black uppercase tracking-widest text-charcoal shadow-gold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Check Pricing — Get Fare Estimate
+            </button>
+          </div>
+          <div className="border-t border-white/8 px-6 py-4 sm:px-10">
+            <p className="text-center text-xs text-white/25">Your details are only shared with Agra Taxis via WhatsApp after you confirm.</p>
+          </div>
         </motion.form>
 
         <AnimatePresence>
@@ -444,7 +461,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="block text-sm font-medium text-charcoal mb-2">{label}</span>
+      <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-white/40">{label}</span>
       {children}
       {error && (
         <span className="mt-1 flex items-center gap-1 text-xs text-red-500">

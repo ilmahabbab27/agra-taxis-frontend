@@ -10,6 +10,7 @@ import { Contact } from "@/components/Contact";
 import { Footer } from "@/components/Footer";
 import { WhatsAppFloat } from "@/components/WhatsAppFloat";
 import { SplashScreen } from "@/components/SplashScreen";
+import { FareStripe } from "@/components/FareStripe";
 
 export default function Index() {
   return (
@@ -18,6 +19,7 @@ export default function Index() {
       <Navbar />
       <main>
         <Hero />
+        <FareStripe />
         <About />
         <Services />
         <Fleet />
