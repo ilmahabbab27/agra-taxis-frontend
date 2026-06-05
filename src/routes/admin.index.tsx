@@ -15,9 +15,11 @@ import {
   saveCustomVehicle,
   saveCategoryToDatabase,
   saveVehicleToDatabase,
+  type DayPrices,
+  type PackagePrices,
+  type PerKmPrices,
   type VehicleCatalogItem,
   type VehicleFormInput,
-  type StayPrices,
 } from "@/lib/vehicle-catalog";
 import {
   Dialog,
@@ -44,19 +46,41 @@ export { AdminDashboard as default };
 const adminInputClass =
   "w-full rounded-xl border border-border bg-background px-3 py-3 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60";
 
-const emptyStayPrices: StayPrices = { day1: 0, day2: 0, day3: 0, day4: 0, day5: 0 };
+const emptyDayPrices: DayPrices = { acNormal: 0, acHill: 0, nonAcNormal: 0, nonAcHill: 0 };
+const emptyPerKmPrices: PerKmPrices = {
+  ac: { oneWay: { normal: 0, hill: 0 }, roundTrip: { normal: 0, hill: 0 } },
+  nonAc: { oneWay: { normal: 0, hill: 0 }, roundTrip: { normal: 0, hill: 0 } },
+};
+const emptyPackagePrices: PackagePrices = {
+  day1: { ...emptyDayPrices },
+};
 
 const emptyVehicleForm: VehicleFormInput = {
   name: "",
   category: "Cars",
   img: "/assets/car.jpg",
+  img2: undefined,
   seats: 4,
   acPricePerKm: 0,
+  acHillPricePerKm: 0,
   nonAcPricePerKm: 0,
+  nonAcHillPricePerKm: 0,
+  perKmPrices: { ...emptyPerKmPrices },
   acAvailable: true,
   nonAcAvailable: true,
-  stayPrices: { ...emptyStayPrices },
+  package1Prices: { ...emptyPackagePrices },
 };
+
+function getPackageDayKeys(prices: PackagePrices): Array<keyof PackagePrices> {
+  const keys = Object.keys(prices).filter((key) => /^day\d+$/.test(key));
+  return (keys.length ? keys : ["day1"]).sort(
+    (a, b) => Number(a.replace("day", "")) - Number(b.replace("day", "")),
+  );
+}
+
+function getPackageDayNumbers(prices: PackagePrices): number[] {
+  return getPackageDayKeys(prices).map((key) => Number(String(key).replace("day", "")));
+}
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -72,7 +96,7 @@ function AdminDashboard() {
   const [seatFilter, setSeatFilter] = useState("all");
   const [comfortFilter, setComfortFilter] = useState<"all" | "ac" | "nonAc">("all");
   const [ready, setReady] = useState(false);
-  const [imageUploading, setImageUploading] = useState(false);
+  const [imageUploading, setImageUploading] = useState<"img" | "img2" | null>(null);
 
   useEffect(() => {
     if (!isAdminAuthed()) {
@@ -101,16 +125,71 @@ function AdminDashboard() {
     setVehicleForm((current) => ({ ...current, [key]: value }));
   }
 
-  function updateStayPrice(day: keyof StayPrices, value: number) {
+  function updatePackagePrice(
+    day: keyof PackagePrices,
+    priceKey: keyof DayPrices,
+    value: number,
+  ) {
     setVehicleForm((current) => ({
       ...current,
-      stayPrices: { ...(current.stayPrices ?? emptyStayPrices), [day]: value },
+      package1Prices: {
+        ...(current.package1Prices ?? emptyPackagePrices),
+        [day]: {
+          ...((current.package1Prices ?? emptyPackagePrices)[day] ?? emptyDayPrices),
+          [priceKey]: value,
+        },
+      },
     }));
   }
 
-  async function onVehicleImageUpload(file: File | undefined) {
+  function addPackageDay() {
+    setVehicleForm((current) => {
+      const prices = current.package1Prices ?? emptyPackagePrices;
+      const nextDayNumber = getPackageDayNumbers(prices).at(-1)! + 1;
+      return {
+        ...current,
+        package1Prices: {
+          ...prices,
+          [`day${nextDayNumber}`]: { ...emptyDayPrices },
+        },
+      };
+    });
+  }
+
+  function removePackageDay(day: keyof PackagePrices) {
+    setVehicleForm((current) => {
+      const prices = { ...(current.package1Prices ?? emptyPackagePrices) };
+      const dayKeys = getPackageDayKeys(prices);
+      if (dayKeys.length <= 1) return current;
+      delete prices[day];
+      return { ...current, package1Prices: prices };
+    });
+  }
+
+  function updatePerKmPrice(
+    group: "ac" | "nonAc",
+    trip: "oneWay" | "roundTrip",
+    kind: "normal" | "hill",
+    value: number,
+  ) {
+    setVehicleForm((current) => ({
+      ...current,
+      perKmPrices: {
+        ...(current.perKmPrices ?? emptyPerKmPrices),
+        [group]: {
+          ...((current.perKmPrices ?? emptyPerKmPrices)[group]),
+          [trip]: {
+            ...((current.perKmPrices ?? emptyPerKmPrices)[group][trip]),
+            [kind]: value,
+          },
+        },
+      },
+    }));
+  }
+
+  async function onVehicleImageUpload(file: File | undefined, target: "img" | "img2") {
     if (!file || !file.type.startsWith("image/")) return;
-    setImageUploading(true);
+    setImageUploading(target);
     try {
       const formData = new FormData();
       formData.append("image", file);
@@ -122,16 +201,16 @@ function AdminDashboard() {
       if (!response.ok) throw new Error("Image upload failed");
       const payload = await response.json() as { url: string };
       const fullUrl = API_BASE.replace(/\/api$/, "") + payload.url;
-      updateVehicleForm("img", fullUrl);
+      updateVehicleForm(target, fullUrl);
     } catch {
       // fallback: embed as base64 if upload fails
       const reader = new FileReader();
       reader.onload = () => {
-        if (typeof reader.result === "string") updateVehicleForm("img", reader.result);
+        if (typeof reader.result === "string") updateVehicleForm(target, reader.result);
       };
       reader.readAsDataURL(file);
     } finally {
-      setImageUploading(false);
+      setImageUploading(null);
     }
   }
 
@@ -169,12 +248,16 @@ function AdminDashboard() {
       name: vehicle.name,
       category: vehicle.category,
       img: vehicle.img,
+      img2: vehicle.img2,
       seats: vehicle.seats,
       acPricePerKm: vehicle.acPricePerKm,
+      acHillPricePerKm: vehicle.acHillPricePerKm,
       nonAcPricePerKm: vehicle.nonAcPricePerKm,
+      nonAcHillPricePerKm: vehicle.nonAcHillPricePerKm,
+      perKmPrices: vehicle.perKmPrices ?? { ...emptyPerKmPrices },
       acAvailable: vehicle.acAvailable,
       nonAcAvailable: vehicle.nonAcAvailable,
-      stayPrices: vehicle.stayPrices ?? { ...emptyStayPrices },
+      package1Prices: vehicle.package1Prices ?? { ...emptyPackagePrices },
     });
     setIsVehicleDialogOpen(true);
   }
@@ -365,26 +448,21 @@ function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded-lg bg-[#f8f9fb] px-2.5 py-2">
                         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">AC / km</p>
+                        <p className="text-[10px] text-muted-foreground">Normal charge</p>
+                        <p className="text-[10px] text-muted-foreground">Hill {vehicle.acAvailable ? formatLkr(vehicle.acHillPricePerKm) : "N/A"}</p>
                         <p className="mt-0.5 font-bold text-charcoal">{vehicle.acAvailable ? formatLkr(vehicle.acPricePerKm) : "—"}</p>
                       </div>
                       <div className="rounded-lg bg-[#f8f9fb] px-2.5 py-2">
                         <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Non-AC / km</p>
+                        <p className="text-[10px] text-muted-foreground">Normal charge</p>
+                        <p className="text-[10px] text-muted-foreground">Hill {vehicle.nonAcAvailable ? formatLkr(vehicle.nonAcHillPricePerKm) : "N/A"}</p>
                         <p className="mt-0.5 font-bold text-charcoal">{vehicle.nonAcAvailable ? formatLkr(vehicle.nonAcPricePerKm) : "—"}</p>
                       </div>
                     </div>
-                    {vehicle.stayPrices && (
-                      <div className="mt-2 rounded-lg border border-border bg-[#f8f9fb] px-2.5 py-2">
-                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Stay charges</p>
-                        <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
-                          {([1, 2, 3, 4, 5] as const).map((d) => (
-                            <div key={d} className="rounded-md bg-white py-1 shadow-soft">
-                              <div className="font-bold text-gold">D{d}</div>
-                              <div className="text-charcoal">{formatLkr(vehicle.stayPrices![`day${d}` as keyof StayPrices])}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="mt-2 rounded-lg border border-border bg-[#f8f9fb] px-2.5 py-2">
+                      <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Packages</p>
+                      <p className="text-[10px] text-charcoal">Package 1: up to 100 km/day</p>
+                    </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
                         type="button"
@@ -474,33 +552,24 @@ function AdminDashboard() {
 
               {/* Image section */}
               <div className="sm:col-span-2 rounded-xl border border-border bg-[#f8f9fb] p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Image</p>
-                <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
-                  <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-white shadow-soft">
-                    <img
-                      src={vehicleForm.img}
-                      alt={vehicleForm.name || "Preview"}
-                      className="h-full w-full object-cover"
-                    />
-                    {imageUploading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-                        <div className="flex flex-col items-center gap-2">
-                          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gold border-t-transparent" />
-                          <span className="text-xs font-medium text-charcoal">Uploading…</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col justify-center gap-3">
-                    <p className="text-sm text-muted-foreground">Upload a clear photo of the vehicle. JPG, PNG or WebP, max 5MB.</p>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      disabled={imageUploading}
-                      onChange={(event) => onVehicleImageUpload(event.target.files?.[0])}
-                      className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
-                    />
-                  </div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Images</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <VehicleImageInput
+                    label="Primary image"
+                    image={vehicleForm.img}
+                    alt={vehicleForm.name || "Primary vehicle preview"}
+                    uploading={imageUploading === "img"}
+                    disabled={Boolean(imageUploading)}
+                    onUpload={(file) => onVehicleImageUpload(file, "img")}
+                  />
+                  <VehicleImageInput
+                    label="Second image"
+                    image={vehicleForm.img2}
+                    alt={vehicleForm.name || "Second vehicle preview"}
+                    uploading={imageUploading === "img2"}
+                    disabled={Boolean(imageUploading)}
+                    onUpload={(file) => onVehicleImageUpload(file, "img2")}
+                  />
                 </div>
               </div>
               <div className="grid gap-3 rounded-xl border border-border p-3">
@@ -512,7 +581,7 @@ function AdminDashboard() {
                   />
                   AC available
                 </label>
-                <AdminField label="AC price per km">
+                <AdminField label="AC one-way normal charge per km">
                   <input
                     type="number"
                     min={0}
@@ -521,6 +590,38 @@ function AdminDashboard() {
                     onChange={(event) =>
                       updateVehicleForm("acPricePerKm", Number(event.target.value))
                     }
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="AC hill country charge per km">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!vehicleForm.acAvailable}
+                    value={vehicleForm.acHillPricePerKm}
+                    onChange={(event) =>
+                      updateVehicleForm("acHillPricePerKm", Number(event.target.value))
+                    }
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="AC round-trip normal charge per km">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!vehicleForm.acAvailable}
+                    value={vehicleForm.perKmPrices?.ac.roundTrip.normal ?? 0}
+                    onChange={(event) => updatePerKmPrice("ac", "roundTrip", "normal", Number(event.target.value))}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="AC round-trip hill charge per km">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!vehicleForm.acAvailable}
+                    value={vehicleForm.perKmPrices?.ac.roundTrip.hill ?? 0}
+                    onChange={(event) => updatePerKmPrice("ac", "roundTrip", "hill", Number(event.target.value))}
                     className={adminInputClass}
                   />
                 </AdminField>
@@ -534,7 +635,7 @@ function AdminDashboard() {
                   />
                   Non AC available
                 </label>
-                <AdminField label="Non AC price per km">
+                <AdminField label="Non AC one-way normal charge per km">
                   <input
                     type="number"
                     min={0}
@@ -546,30 +647,50 @@ function AdminDashboard() {
                     className={adminInputClass}
                   />
                 </AdminField>
+                <AdminField label="Non AC hill country charge per km">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!vehicleForm.nonAcAvailable}
+                    value={vehicleForm.nonAcHillPricePerKm}
+                    onChange={(event) =>
+                      updateVehicleForm("nonAcHillPricePerKm", Number(event.target.value))
+                    }
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="Non AC round-trip normal charge per km">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!vehicleForm.nonAcAvailable}
+                    value={vehicleForm.perKmPrices?.nonAc.roundTrip.normal ?? 0}
+                    onChange={(event) => updatePerKmPrice("nonAc", "roundTrip", "normal", Number(event.target.value))}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="Non AC round-trip hill charge per km">
+                  <input
+                    type="number"
+                    min={0}
+                    disabled={!vehicleForm.nonAcAvailable}
+                    value={vehicleForm.perKmPrices?.nonAc.roundTrip.hill ?? 0}
+                    onChange={(event) => updatePerKmPrice("nonAc", "roundTrip", "hill", Number(event.target.value))}
+                    className={adminInputClass}
+                  />
+                </AdminField>
               </div>
 
-              <div className="sm:col-span-2 rounded-xl border border-border p-4 grid gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Stay / Daily Additional Charges (Rs.)
-                </p>
-                <div className="grid grid-cols-5 gap-2">
-                  {([1, 2, 3, 4, 5] as const).map((d) => {
-                    const key = `day${d}` as keyof StayPrices;
-                    return (
-                      <AdminField key={d} label={`Day ${d}`}>
-                        <input
-                          type="number"
-                          min={0}
-                          value={vehicleForm.stayPrices?.[key] ?? 0}
-                          onChange={(event) => updateStayPrice(key, Number(event.target.value))}
-                          className={adminInputClass}
-                        />
-                      </AdminField>
-                    );
-                  })}
-                </div>
-              </div>
-
+              <PackagePriceTable
+                title="Package 1"
+                kmLimit={100}
+                prices={vehicleForm.package1Prices ?? emptyPackagePrices}
+                acAvailable={vehicleForm.acAvailable}
+                nonAcAvailable={vehicleForm.nonAcAvailable}
+                onAddDay={addPackageDay}
+                onRemoveDay={removePackageDay}
+                onChange={updatePackagePrice}
+              />
               <DialogFooter className="sm:col-span-2">
                 <button
                   type="button"
@@ -649,5 +770,148 @@ function AdminField({
       </span>
       {children}
     </label>
+  );
+}
+
+function VehicleImageInput({
+  label,
+  image,
+  alt,
+  uploading,
+  disabled,
+  onUpload,
+}: {
+  label: string;
+  image?: string;
+  alt: string;
+  uploading: boolean;
+  disabled: boolean;
+  onUpload: (file: File | undefined) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <p className="text-xs font-semibold text-charcoal">{label}</p>
+      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-white shadow-soft">
+        {image ? (
+          <img src={image} alt={alt} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center text-xs font-semibold text-muted-foreground">
+            No image
+          </div>
+        )}
+        {uploading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+            <div className="flex flex-col items-center gap-2">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gold border-t-transparent" />
+              <span className="text-xs font-medium text-charcoal">Uploading...</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <input
+        type="file"
+        accept="image/*"
+        disabled={disabled}
+        onChange={(event) => onUpload(event.target.files?.[0])}
+        className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
+      />
+    </div>
+  );
+}
+
+function PackagePriceTable({
+  title,
+  kmLimit,
+  prices,
+  acAvailable,
+  nonAcAvailable,
+  onAddDay,
+  onRemoveDay,
+  onChange,
+}: {
+  title: string;
+  kmLimit: number;
+  prices: PackagePrices;
+  acAvailable: boolean;
+  nonAcAvailable: boolean;
+  onAddDay: () => void;
+  onRemoveDay: (day: keyof PackagePrices) => void;
+  onChange: (day: keyof PackagePrices, priceKey: keyof DayPrices, value: number) => void;
+}) {
+  const columns: Array<{ key: keyof DayPrices; label: string }> = [];
+  if (acAvailable) {
+    columns.push({ key: "acNormal", label: "AC normal" }, { key: "acHill", label: "AC hill" });
+  }
+  if (nonAcAvailable) {
+    columns.push(
+      { key: "nonAcNormal", label: "Non AC normal" },
+      { key: "nonAcHill", label: "Non AC hill" },
+    );
+  }
+  const dayKeys = getPackageDayKeys(prices);
+
+  return (
+    <div className="sm:col-span-2 rounded-xl border border-border p-4">
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+          <p className="text-sm font-semibold text-charcoal">Per-day package charges</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="text-xs font-medium text-muted-foreground">Allows up to {kmLimit} km each day</p>
+          <button
+            type="button"
+            onClick={onAddDay}
+            className="rounded-lg bg-charcoal px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
+          >
+            Add Day
+          </button>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[760px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="w-20 px-2 py-2 font-semibold">Day</th>
+              {columns.map((column) => (
+                <th key={column.key} className="px-2 py-2 font-semibold">{column.label}</th>
+              ))}
+              <th className="w-24 px-2 py-2 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {dayKeys.map((day) => {
+              const dayNumber = Number(String(day).replace("day", ""));
+              return (
+                <tr key={day} className="border-b border-border/70 last:border-0">
+                  <td className="px-2 py-2 text-xs font-semibold text-charcoal">Day {dayNumber}</td>
+                  {columns.map((column) => (
+                    <td key={column.key} className="px-2 py-2">
+                      <input
+                        type="number"
+                        min={0}
+                        value={prices[day]?.[column.key] ?? 0}
+                        onChange={(event) => onChange(day, column.key, Number(event.target.value))}
+                        className="w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold"
+                      />
+                    </td>
+                  ))}
+                  <td className="px-2 py-2">
+                    <button
+                      type="button"
+                      disabled={dayKeys.length <= 1}
+                      onClick={() => onRemoveDay(day)}
+                      className="rounded-lg border border-red-100 bg-red-50 px-2 py-2 text-xs font-semibold text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

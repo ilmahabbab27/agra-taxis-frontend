@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Crosshair, Loader2, LocateFixed, MapPin, Plus, Search, X } from "lucide-react";
+import { Crosshair, Loader2, MapPin, Plus, Search, X } from "lucide-react";
 import {
   getMultiPointRouteDistanceKm,
   hasGoogleLocationKey,
@@ -282,14 +282,6 @@ export function LocationMapPicker({
             title="Add a middle stop"
           >
             <Plus className="h-3.5 w-3.5" /> Stop
-          </button>
-          <button
-            type="button"
-            onClick={useCurrentLocation}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-charcoal hover:bg-accent"
-            title="Use current location"
-          >
-            <LocateFixed className="h-4 w-4" />
           </button>
         </div>
       </div>

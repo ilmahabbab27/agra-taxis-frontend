@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Users, Snowflake, Wifi, Compass, UserCheck, ArrowRight } from "lucide-react";
+import { ArrowRight, Compass, Eye, Snowflake, UserCheck, Users, Wifi, X } from "lucide-react";
 import { WhatsAppIcon } from "@/components/WhatsAppIcon";
 import { waLink } from "@/lib/contact";
 import {
@@ -19,6 +19,7 @@ export function Fleet() {
   const [active, setActive] = useState<Category>("All");
   const [categoryList, setCategoryList] = useState<Category[]>(() => getVehicleCategories());
   const [vehicleList, setVehicleList] = useState<VehicleCatalogItem[]>(() => getVehicles());
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleCatalogItem | null>(null);
   const filtered = active === "All" ? vehicleList : vehicleList.filter((f) => f.category === active);
 
   useEffect(() => {
@@ -161,17 +162,26 @@ export function Fleet() {
                   Rates are estimates. Final price confirmed per route and requirements.
                 </p>
 
-                {/* CTA */}
-                <a
-                  href={waLink(`Hi, I'd like a price inquiry for the ${v.name} (${v.seats} seats).`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group/btn mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-charcoal py-3 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-charcoal/90"
-                >
-                  <WhatsAppIcon className="h-4 w-4 text-whatsapp" />
-                  Price Inquiry
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
-                </a>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVehicle(v)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white py-3 text-sm font-bold text-charcoal transition-all duration-200 hover:border-charcoal/30"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Full View
+                  </button>
+                  <a
+                    href={waLink(`Hi, I'd like a price inquiry for the ${v.name} (${v.seats} seats).`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group/btn inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal py-3 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-charcoal/90"
+                  >
+                    <WhatsAppIcon className="h-4 w-4 text-whatsapp" />
+                    Inquiry
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover/btn:translate-x-0.5" />
+                  </a>
+                </div>
               </div>
             </motion.div>
           ))}
@@ -183,6 +193,152 @@ export function Fleet() {
           </div>
         )}
       </div>
+
+      {selectedVehicle && (
+        <VehicleFullView vehicle={selectedVehicle} onClose={() => setSelectedVehicle(null)} />
+      )}
     </section>
+  );
+}
+
+function VehicleFullView({ vehicle, onClose }: { vehicle: VehicleCatalogItem; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white shadow-card">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-white px-5 py-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-gold">{vehicle.category}</p>
+            <h3 className="text-xl font-bold text-charcoal">{vehicle.name}</h3>
+          </div>
+          <button type="button" onClick={onClose} className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-charcoal hover:bg-secondary" aria-label="Close vehicle details">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="grid gap-5 p-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-3">
+            <div className="overflow-hidden rounded-lg bg-secondary">
+              <img src={vehicle.img} alt={vehicle.name} className="aspect-16/10 h-full w-full object-cover" />
+            </div>
+            {vehicle.img2 && (
+              <div className="overflow-hidden rounded-lg bg-secondary">
+                <img src={vehicle.img2} alt={`${vehicle.name} secondary view`} className="aspect-16/10 h-full w-full object-cover" />
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <DetailTile label="Seats" value={`${vehicle.seats}`} />
+              <DetailTile label="Comfort" value={[vehicle.acAvailable && "AC", vehicle.nonAcAvailable && "Non-AC"].filter(Boolean).join(" / ") || "N/A"} />
+            </div>
+
+            <div className="rounded-lg border border-border">
+              <div className="border-b border-border px-4 py-3">
+                <p className="text-sm font-bold text-charcoal">Per-kilometer charges</p>
+              </div>
+              <RateTable vehicle={vehicle} />
+            </div>
+
+            {vehicle.package1Prices && (
+              <div className="rounded-lg border border-border">
+                <div className="border-b border-border px-4 py-3">
+                  <p className="text-sm font-bold text-charcoal">Package day charges</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Packages include 100 km per day. Extra distance uses the selected per-km charge.</p>
+                </div>
+                <PackageTable vehicle={vehicle} />
+              </div>
+            )}
+
+            <a
+              href={waLink(`Hi, I'd like a price inquiry for the ${vehicle.name} (${vehicle.seats} seats).`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-charcoal py-3 text-sm font-bold text-white shadow-card hover:bg-charcoal/90"
+            >
+              <WhatsAppIcon className="h-4 w-4 text-whatsapp" />
+              Price Inquiry
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-secondary/60 px-4 py-3">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-bold text-charcoal">{value}</p>
+    </div>
+  );
+}
+
+function RateTable({ vehicle }: { vehicle: VehicleCatalogItem }) {
+  const rates = vehicle.perKmPrices;
+  const rows = [
+    ["AC", "One way", rates?.ac.oneWay.normal ?? vehicle.acPricePerKm, rates?.ac.oneWay.hill ?? vehicle.acHillPricePerKm, vehicle.acAvailable],
+    ["AC", "Round trip", rates?.ac.roundTrip.normal ?? vehicle.acPricePerKm, rates?.ac.roundTrip.hill ?? vehicle.acHillPricePerKm, vehicle.acAvailable],
+    ["Non-AC", "One way", rates?.nonAc.oneWay.normal ?? vehicle.nonAcPricePerKm, rates?.nonAc.oneWay.hill ?? vehicle.nonAcHillPricePerKm, vehicle.nonAcAvailable],
+    ["Non-AC", "Round trip", rates?.nonAc.roundTrip.normal ?? vehicle.nonAcPricePerKm, rates?.nonAc.roundTrip.hill ?? vehicle.nonAcHillPricePerKm, vehicle.nonAcAvailable],
+  ] as const;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-secondary/70 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="px-4 py-2">Type</th>
+            <th className="px-4 py-2">Trip</th>
+            <th className="px-4 py-2">Normal</th>
+            <th className="px-4 py-2">Hill</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([type, trip, normal, hill, available]) => (
+            <tr key={`${type}-${trip}`} className="border-t border-border">
+              <td className="px-4 py-2 font-semibold text-charcoal">{type}</td>
+              <td className="px-4 py-2 text-muted-foreground">{trip}</td>
+              <td className="px-4 py-2">{available ? formatLkr(normal) : "N/A"}</td>
+              <td className="px-4 py-2">{available ? formatLkr(hill) : "N/A"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function PackageTable({ vehicle }: { vehicle: VehicleCatalogItem }) {
+  const rows = Object.entries(vehicle.package1Prices || {}).sort(
+    ([a], [b]) => Number(a.replace("day", "")) - Number(b.replace("day", "")),
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-secondary/70 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="px-4 py-2">Day</th>
+            <th className="px-4 py-2">AC normal</th>
+            <th className="px-4 py-2">AC hill</th>
+            <th className="px-4 py-2">Non-AC normal</th>
+            <th className="px-4 py-2">Non-AC hill</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([day, prices]) => (
+            <tr key={day} className="border-t border-border">
+              <td className="px-4 py-2 font-semibold text-charcoal">{day.replace("day", "Day ")}</td>
+              <td className="px-4 py-2">{vehicle.acAvailable ? formatLkr(prices.acNormal) : "N/A"}</td>
+              <td className="px-4 py-2">{vehicle.acAvailable ? formatLkr(prices.acHill) : "N/A"}</td>
+              <td className="px-4 py-2">{vehicle.nonAcAvailable ? formatLkr(prices.nonAcNormal) : "N/A"}</td>
+              <td className="px-4 py-2">{vehicle.nonAcAvailable ? formatLkr(prices.nonAcHill) : "N/A"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }

@@ -3,6 +3,11 @@ export type LocationPoint = {
   lng: number;
 };
 
+export type LocationClassification = {
+  isHillCountry: boolean;
+  region: string | null;
+};
+
 export type LocationSuggestion = {
   id: string;
   label: string;
@@ -133,8 +138,61 @@ export async function reverseLookupLocation(point: LocationPoint) {
   });
   const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
   if (!res.ok) return null;
-  const data = (await res.json()) as { display_name?: string };
-  return data.display_name ? compactPlaceName(data.display_name) : null;
+  const data = (await res.json()) as {
+    display_name?: string;
+    address?: {
+      city?: string;
+      town?: string;
+      village?: string;
+      county?: string;
+      state?: string;
+    };
+  };
+  if (!data.display_name) return null;
+  return {
+    label: compactPlaceName(data.display_name),
+    classification: classifyHillCountry(data.address || {}, point),
+  };
+}
+
+export function classifyHillCountry(
+  address: {
+    city?: string;
+    town?: string;
+    village?: string;
+    county?: string;
+    state?: string;
+  },
+  point?: LocationPoint,
+): LocationClassification {
+  const text = [address.city, address.town, address.village, address.county, address.state]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  const hillKeywords = [
+    "nuwara eliya",
+    "badulla",
+    "bandarawela",
+    "ella",
+    "haputale",
+    "kandy",
+    "matale",
+    "maskeliya",
+    "hatton",
+    "diyatalawa",
+    "talawakele",
+    "koslanda",
+    "gampola",
+  ];
+
+  const keywordHit = hillKeywords.some((keyword) => text.includes(keyword));
+  const latHint = point ? point.lat >= 6.5 && point.lat <= 8.8 && point.lng >= 79.5 && point.lng <= 81.8 : false;
+
+  return {
+    isHillCountry: keywordHit || latHint,
+    region: keywordHit ? text : null,
+  };
 }
 
 export async function getRouteDistanceKm(

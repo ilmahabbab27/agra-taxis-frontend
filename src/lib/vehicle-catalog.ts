@@ -1,5 +1,38 @@
 export type VehicleCategory = string;
 
+export type DayPrices = {
+  acNormal: number;
+  acHill: number;
+  nonAcNormal: number;
+  nonAcHill: number;
+};
+
+export type PackagePrices = Record<string, DayPrices>;
+
+
+export type PerKmPrices = {
+  ac: {
+    oneWay: {
+      normal: number;
+      hill: number;
+    };
+    roundTrip: {
+      normal: number;
+      hill: number;
+    };
+  };
+  nonAc: {
+    oneWay: {
+      normal: number;
+      hill: number;
+    };
+    roundTrip: {
+      normal: number;
+      hill: number;
+    };
+  };
+};
+
 export type StayPrices = {
   day1: number;
   day2: number;
@@ -13,11 +46,16 @@ export type VehicleCatalogItem = {
   name: string;
   category: VehicleCategory;
   img: string;
+  img2?: string;
   seats: number;
   acPricePerKm: number;
+  acHillPricePerKm: number;
   nonAcPricePerKm: number;
+  nonAcHillPricePerKm: number;
+  perKmPrices?: PerKmPrices;
   acAvailable: boolean;
   nonAcAvailable: boolean;
+  package1Prices?: PackagePrices;
   stayPrices?: StayPrices;
   isCustom?: boolean;
 };
@@ -179,8 +217,29 @@ export function getVehicleByName(name: string, source: VehicleCatalogItem[] = ge
   return source.find((vehicle) => vehicle.name === name) || source[0] || vehicles[0];
 }
 
-export function getPricePerKm(vehicle: VehicleCatalogItem, ac: string) {
-  return ac === "Non AC" ? vehicle.nonAcPricePerKm : vehicle.acPricePerKm;
+export function getPricePerKm(
+  vehicle: VehicleCatalogItem,
+  ac: string,
+  trip: string = "One Way",
+  isHillCountry = false,
+) {
+  const isRoundTrip = trip === "Round Trip";
+  if (ac === "Non AC") {
+    return isRoundTrip
+      ? (isHillCountry
+          ? vehicle.perKmPrices?.nonAc.roundTrip.hill
+          : vehicle.perKmPrices?.nonAc.roundTrip.normal) ?? vehicle.nonAcPricePerKm
+      : (isHillCountry
+          ? vehicle.perKmPrices?.nonAc.oneWay.hill
+          : vehicle.perKmPrices?.nonAc.oneWay.normal) ?? vehicle.nonAcPricePerKm;
+  }
+  return isRoundTrip
+    ? (isHillCountry
+        ? vehicle.perKmPrices?.ac.roundTrip.hill
+        : vehicle.perKmPrices?.ac.roundTrip.normal) ?? vehicle.acPricePerKm
+    : (isHillCountry
+        ? vehicle.perKmPrices?.ac.oneWay.hill
+        : vehicle.perKmPrices?.ac.oneWay.normal) ?? vehicle.acPricePerKm;
 }
 
 export function formatLkr(value: number) {
@@ -214,6 +273,58 @@ function normalizeStayPrices(raw: unknown): StayPrices {
   };
 }
 
+function emptyDayPrices(): DayPrices {
+  return { acNormal: 0, acHill: 0, nonAcNormal: 0, nonAcHill: 0 };
+}
+
+function normalizePackagePrices(raw: unknown): PackagePrices {
+  const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const dayKeys = Object.keys(s).filter((key) => /^day\d+$/.test(key));
+  const keys = dayKeys.length ? dayKeys : ["day1"];
+
+  return keys
+    .sort((a, b) => Number(a.replace("day", "")) - Number(b.replace("day", "")))
+    .reduce<PackagePrices>((normalized, key) => {
+    const row = s[key] && typeof s[key] === "object" ? (s[key] as Record<string, unknown>) : {};
+      normalized[key] = {
+      acNormal: Math.max(0, Number(row.acNormal) || 0),
+      acHill: Math.max(0, Number(row.acHill) || 0),
+      nonAcNormal: Math.max(0, Number(row.nonAcNormal) || 0),
+      nonAcHill: Math.max(0, Number(row.nonAcHill) || 0),
+    };
+      return normalized;
+    }, {});
+}
+
+function normalizePerKmPrices(raw: unknown): PerKmPrices {
+  const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const ac = s.ac && typeof s.ac === "object" ? (s.ac as Record<string, unknown>) : {};
+  const nonAc = s.nonAc && typeof s.nonAc === "object" ? (s.nonAc as Record<string, unknown>) : {};
+  const oneWay = (row: unknown) => (row && typeof row === "object" ? (row as Record<string, unknown>) : {});
+  return {
+    ac: {
+      oneWay: {
+        normal: Math.max(0, Number(oneWay(ac.oneWay).normal) || 0),
+        hill: Math.max(0, Number(oneWay(ac.oneWay).hill) || 0),
+      },
+      roundTrip: {
+        normal: Math.max(0, Number(oneWay(ac.roundTrip).normal) || 0),
+        hill: Math.max(0, Number(oneWay(ac.roundTrip).hill) || 0),
+      },
+    },
+    nonAc: {
+      oneWay: {
+        normal: Math.max(0, Number(oneWay(nonAc.oneWay).normal) || 0),
+        hill: Math.max(0, Number(oneWay(nonAc.oneWay).hill) || 0),
+      },
+      roundTrip: {
+        normal: Math.max(0, Number(oneWay(nonAc.roundTrip).normal) || 0),
+        hill: Math.max(0, Number(oneWay(nonAc.roundTrip).hill) || 0),
+      },
+    },
+  };
+}
+
 function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
   const acAvailable = vehicle.acAvailable || !vehicle.nonAcAvailable;
   return {
@@ -221,12 +332,16 @@ function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
     name: vehicle.name.trim(),
     category: vehicle.category.trim() || "Cars",
     img: vehicle.img.trim() || "/assets/car.jpg",
+    img2: vehicle.img2?.trim() || undefined,
     seats: Math.max(1, Number(vehicle.seats) || 1),
     acPricePerKm: acAvailable ? Math.max(0, Number(vehicle.acPricePerKm) || 0) : 0,
+    acHillPricePerKm: acAvailable ? Math.max(0, Number(vehicle.acHillPricePerKm) || 0) : 0,
     nonAcPricePerKm: vehicle.nonAcAvailable ? Math.max(0, Number(vehicle.nonAcPricePerKm) || 0) : 0,
+    nonAcHillPricePerKm: vehicle.nonAcAvailable ? Math.max(0, Number(vehicle.nonAcHillPricePerKm) || 0) : 0,
+    perKmPrices: normalizePerKmPrices(vehicle.perKmPrices),
     acAvailable,
     nonAcAvailable: vehicle.nonAcAvailable,
-    stayPrices: vehicle.stayPrices ? normalizeStayPrices(vehicle.stayPrices) : undefined,
+    package1Prices: normalizePackagePrices(vehicle.package1Prices),
   };
 }
 
@@ -247,11 +362,15 @@ function normalizeApiVehicle(vehicle: Partial<VehicleCatalogItem>) {
     name: String(vehicle.name || ""),
     category: String(vehicle.category || "Cars"),
     img: resolveImgUrl(vehicle.img),
+    img2: vehicle.img2 ? resolveImgUrl(vehicle.img2) : undefined,
     seats: Math.max(1, Number(vehicle.seats) || 1),
     acPricePerKm: Math.max(0, Number(vehicle.acPricePerKm) || 0),
+    acHillPricePerKm: Math.max(0, Number(vehicle.acHillPricePerKm) || 0),
     nonAcPricePerKm: Math.max(0, Number(vehicle.nonAcPricePerKm) || 0),
+    nonAcHillPricePerKm: Math.max(0, Number(vehicle.nonAcHillPricePerKm) || 0),
+    perKmPrices: normalizePerKmPrices(vehicle.perKmPrices),
     acAvailable: Boolean(vehicle.acAvailable),
     nonAcAvailable: Boolean(vehicle.nonAcAvailable),
-    stayPrices: vehicle.stayPrices ? normalizeStayPrices(vehicle.stayPrices) : undefined,
+    package1Prices: normalizePackagePrices(vehicle.package1Prices),
   };
 }
