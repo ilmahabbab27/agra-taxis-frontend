@@ -172,7 +172,7 @@ export async function saveVehicleToDatabase(vehicle: VehicleFormInput, id?: numb
     },
     body: JSON.stringify(normalizeVehicle(vehicle)),
   });
-  if (!response.ok) throw new Error("Save vehicle API request failed");
+  if (!response.ok) throw new Error(await readApiError(response, "Save vehicle API request failed"));
   const payload = await response.json() as { data: VehicleCatalogItem };
   return normalizeApiVehicle(payload.data) as VehicleCatalogItem;
 }
@@ -198,8 +198,23 @@ export async function saveCategoryToDatabase(category: string) {
     },
     body: JSON.stringify({ name: category.trim() }),
   });
-  if (!response.ok) throw new Error("Save category API request failed");
+  if (!response.ok) throw new Error(await readApiError(response, "Save category API request failed"));
   return response.json() as Promise<{ data: string }>;
+}
+
+async function readApiError(response: Response, fallback: string) {
+  try {
+    const payload = await response.json() as { message?: unknown; errors?: Record<string, unknown> };
+    const message = typeof payload.message === "string" ? payload.message : fallback;
+    const errors = payload.errors && typeof payload.errors === "object"
+      ? Object.values(payload.errors)
+          .flatMap((value) => Array.isArray(value) ? value : [value])
+          .filter((value): value is string => typeof value === "string")
+      : [];
+    return errors.length ? `${message}: ${errors.join(" ")}` : message;
+  } catch {
+    return fallback;
+  }
 }
 
 export function getCustomCategories() {

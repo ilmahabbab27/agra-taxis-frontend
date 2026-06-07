@@ -263,6 +263,7 @@ function AdminDashboard() {
   const [ready, setReady] = useState(false);
   const [imageUploading, setImageUploading] = useState<"img" | "img2" | null>(null);
   const [lorryImageUploading, setLorryImageUploading] = useState<ImageSlot | null>(null);
+  const [vehicleSaveError, setVehicleSaveError] = useState("");
 
   useEffect(() => {
     if (!isAdminAuthed()) {
@@ -315,6 +316,7 @@ function AdminDashboard() {
   }
 
   function updateVehicleForm<K extends keyof VehicleFormInput>(key: K, value: VehicleFormInput[K]) {
+    setVehicleSaveError("");
     setVehicleForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -498,9 +500,9 @@ function AdminDashboard() {
     const editingVehicle = adminVehicles.find((vehicle) => vehicle.name === editingVehicleName);
     try {
       await saveVehicleToDatabase(vehicleForm, editingVehicle?.id);
-    } catch {
-      if (editingVehicleName) deleteVehicle(editingVehicleName);
-      saveCustomVehicle(vehicleForm);
+    } catch (error) {
+      setVehicleSaveError(error instanceof Error ? error.message : "Could not save vehicle.");
+      return;
     }
     await refreshVehicles();
     closeVehicleDialog();
@@ -543,6 +545,7 @@ function AdminDashboard() {
   function resetVehicleForm() {
     setVehicleForm(emptyVehicleForm);
     setEditingVehicleName(null);
+    setVehicleSaveError("");
   }
 
   function openAddVehicleDialog() {
@@ -1166,6 +1169,11 @@ function AdminDashboard() {
                 onRemoveDay={removePackageDay}
                 onChange={updatePackagePrice}
               />
+              {vehicleSaveError && (
+                <div className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                  {vehicleSaveError}
+                </div>
+              )}
               <DialogFooter className="sm:col-span-2">
                 <button
                   type="button"
