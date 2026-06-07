@@ -80,9 +80,10 @@ export function LocationMapPicker({
   useEffect(() => setStopSearches(stopLabels), [stopLabels]);
 
   const reverseGeocode = useCallback(async (point: PinPoint, type: ActivePin) => {
-    try {
-      const label = await reverseLookupLocation(point);
-      if (!label) return;
+      try {
+        const result = await reverseLookupLocation(point);
+        const label = typeof result === "string" ? result : result?.label;
+        if (!label) return;
       if (type === "pickup") {
         onPickupLabelChangeRef.current(label);
         setPickupSearch(label);
@@ -141,7 +142,9 @@ export function LocationMapPicker({
 
   // Distance calculation across all points
   useEffect(() => {
-    const allPins: (PinPoint | null)[] = [pickup, ...stops, destination];
+    const allPins: (PinPoint | null)[] = isRoundTrip
+      ? [pickup, ...stops, destination, pickup]
+      : [pickup, ...stops, destination];
     const resolved = allPins.filter((p): p is PinPoint => p !== null);
 
     if (resolved.length < 2) {
@@ -156,13 +159,13 @@ export function LocationMapPicker({
       setIsRouting(true);
       try {
         const km = await getMultiPointRouteDistanceKm(resolved, controller.signal);
-        const total = Number((isRoundTrip ? km * 2 : km).toFixed(1));
+        const total = Number(km.toFixed(1));
         const next: RouteDistance = { km: total, source: "route" };
         setDistance(next);
         onDistanceChange(next);
       } catch {
         const straight = haversineTotal(resolved);
-        const total = Number((isRoundTrip ? straight * 2 : straight).toFixed(1));
+        const total = Number(straight.toFixed(1));
         const next: RouteDistance = { km: total, source: "straight" };
         setDistance(next);
         onDistanceChange(next);
@@ -260,7 +263,7 @@ export function LocationMapPicker({
           </span>
           <span className="text-xs text-muted-foreground">
             {hasGoogleLocationKey() ? "Powered by Google location search." : "Powered by OpenStreetMap."}
-            {isRoundTrip && " Distance doubled for round trip."}
+            {isRoundTrip && " Round trip includes the return to pickup."}
           </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -382,7 +385,7 @@ export function LocationMapPicker({
               <>
                 <span className="font-semibold text-charcoal">{distance.km} km</span>
                 {" "}{distance.source === "route" ? "by road" : "straight line"}
-                {isRoundTrip && <span className="ml-1 text-gold font-semibold">(×2 round trip)</span>}
+                {isRoundTrip && <span className="ml-1 text-gold font-semibold">(return to pickup included)</span>}
                 {stops.length > 0 && <span className="ml-1">(via {stops.length} stop{stops.length > 1 ? "s" : ""})</span>}
               </>
             ) : null}
@@ -423,6 +426,7 @@ function LocationSearchBox({
   icon,
   value,
   placeholder,
+  locked = false,
   onFocus,
   onChange,
 }: {
@@ -431,6 +435,7 @@ function LocationSearchBox({
   icon: React.ReactNode;
   value: string;
   placeholder: string;
+  locked?: boolean;
   onFocus: () => void;
   onChange: (value: string) => void;
 }) {
@@ -450,8 +455,9 @@ function LocationSearchBox({
           value={value}
           placeholder={placeholder}
           onFocus={onFocus}
+          readOnly={locked}
           onChange={(event) => onChange(event.target.value)}
-          className="mt-0.5 w-full bg-transparent text-sm font-semibold text-charcoal outline-none placeholder:text-muted-foreground"
+          className={`mt-0.5 w-full bg-transparent text-sm font-semibold text-charcoal outline-none placeholder:text-muted-foreground ${locked ? "cursor-not-allowed" : ""}`}
         />
       </span>
     </label>

@@ -41,12 +41,32 @@ export type StayPrices = {
   day5: number;
 };
 
+export type LorryRateRow = {
+  type: string;
+  hillExtraPerKm: number;
+  start: number;
+  extra: number;
+  upDown: number;
+  waiting: number;
+  waitingHour: number;
+  between100And130: number;
+  maxUpDownKm: number;
+  dropMinKm: number;
+  dropMaxKm: number;
+};
+
+export type LorryRates = Record<string, LorryRateRow>;
+
 export type VehicleCatalogItem = {
   id?: number;
   name: string;
   category: VehicleCategory;
   img: string;
   img2?: string;
+  img3?: string;
+  img4?: string;
+  img5?: string;
+  images?: string[];
   seats: number;
   acPricePerKm: number;
   acHillPricePerKm: number;
@@ -57,6 +77,7 @@ export type VehicleCatalogItem = {
   nonAcAvailable: boolean;
   package1Prices?: PackagePrices;
   stayPrices?: StayPrices;
+  lorryRates?: LorryRates;
   isCustom?: boolean;
 };
 
@@ -77,6 +98,8 @@ export const vehicles: VehicleCatalogItem[] = [];
 const CUSTOM_VEHICLES_KEY = "agra_custom_vehicles_v1";
 const DELETED_VEHICLES_KEY = "agra_deleted_vehicles_v1";
 const CUSTOM_CATEGORIES_KEY = "agra_custom_vehicle_categories_v1";
+const VEHICLE_CACHE_KEY = "agra_vehicle_cache_v1";
+const LORRY_CACHE_KEY = "agra_lorry_cache_v1";
 const DEFAULT_API_BASE = "http://localhost/Agra%20Taxis%20Backend/public/api";
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE).replace(/\/$/, "");
 
@@ -104,7 +127,13 @@ export async function getVehiclesFromDatabase() {
   if (!response.ok) throw new Error("Vehicle API request failed");
   const payload = await response.json();
   if (!Array.isArray(payload.data)) return [];
-  return payload.data.map(normalizeApiVehicle) as VehicleCatalogItem[];
+  const vehicles = payload.data.map(normalizeApiVehicle) as VehicleCatalogItem[];
+  setCache(VEHICLE_CACHE_KEY, vehicles);
+  return vehicles;
+}
+
+export function getCachedVehiclesFromDatabase() {
+  return getCache<VehicleCatalogItem[]>(VEHICLE_CACHE_KEY);
 }
 
 export async function getVehicleCategoriesFromDatabase(): Promise<Array<"All" | VehicleCategory>> {
@@ -112,11 +141,26 @@ export async function getVehicleCategoriesFromDatabase(): Promise<Array<"All" | 
     headers: { Accept: "application/json" },
   });
   if (!response.ok) throw new Error("Vehicle categories API request failed");
-  const payload = await response.json();
+  const payload = await response.json() as { data?: unknown };
   const categories = Array.isArray(payload.data)
     ? payload.data.filter((category: unknown): category is string => typeof category === "string")
     : [];
   return ["All", ...Array.from(new Set(categories))];
+}
+
+export async function getLorriesFromDatabase() {
+  const response = await fetch(`${API_BASE}/lorries`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) throw new Error("Lorry API request failed");
+  const payload = await response.json() as { data?: unknown };
+  const lorries = Array.isArray(payload.data) ? payload.data.map(normalizeApiVehicle) as VehicleCatalogItem[] : [];
+  setCache(LORRY_CACHE_KEY, lorries);
+  return lorries;
+}
+
+export function getCachedLorriesFromDatabase() {
+  return getCache<VehicleCatalogItem[]>(LORRY_CACHE_KEY);
 }
 
 export async function saveVehicleToDatabase(vehicle: VehicleFormInput, id?: number) {
@@ -129,7 +173,7 @@ export async function saveVehicleToDatabase(vehicle: VehicleFormInput, id?: numb
     body: JSON.stringify(normalizeVehicle(vehicle)),
   });
   if (!response.ok) throw new Error("Save vehicle API request failed");
-  const payload = await response.json();
+  const payload = await response.json() as { data: VehicleCatalogItem };
   return normalizeApiVehicle(payload.data) as VehicleCatalogItem;
 }
 
@@ -155,7 +199,7 @@ export async function saveCategoryToDatabase(category: string) {
     body: JSON.stringify({ name: category.trim() }),
   });
   if (!response.ok) throw new Error("Save category API request failed");
-  return response.json();
+  return response.json() as Promise<{ data: string }>;
 }
 
 export function getCustomCategories() {
@@ -333,6 +377,9 @@ function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
     category: vehicle.category.trim() || "Cars",
     img: vehicle.img.trim() || "/assets/car.jpg",
     img2: vehicle.img2?.trim() || undefined,
+    img3: vehicle.img3?.trim() || undefined,
+    img4: vehicle.img4?.trim() || undefined,
+    img5: vehicle.img5?.trim() || undefined,
     seats: Math.max(1, Number(vehicle.seats) || 1),
     acPricePerKm: acAvailable ? Math.max(0, Number(vehicle.acPricePerKm) || 0) : 0,
     acHillPricePerKm: acAvailable ? Math.max(0, Number(vehicle.acHillPricePerKm) || 0) : 0,
@@ -342,6 +389,7 @@ function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
     acAvailable,
     nonAcAvailable: vehicle.nonAcAvailable,
     package1Prices: normalizePackagePrices(vehicle.package1Prices),
+    lorryRates: normalizeLorryRates(vehicle.lorryRates),
   };
 }
 
@@ -357,20 +405,87 @@ function resolveImgUrl(img: unknown): string {
 }
 
 function normalizeApiVehicle(vehicle: Partial<VehicleCatalogItem>) {
+  const readNumber = (...values: unknown[]) =>
+    values.reduce<number>((result, value) => {
+      if (result > 0) return result;
+      const next = Math.max(0, Number(value) || 0);
+      return next;
+    }, 0);
   return {
     id: vehicle.id,
     name: String(vehicle.name || ""),
     category: String(vehicle.category || "Cars"),
     img: resolveImgUrl(vehicle.img),
     img2: vehicle.img2 ? resolveImgUrl(vehicle.img2) : undefined,
+    img3: vehicle.img3 ? resolveImgUrl(vehicle.img3) : undefined,
+    img4: vehicle.img4 ? resolveImgUrl(vehicle.img4) : undefined,
+    img5: vehicle.img5 ? resolveImgUrl(vehicle.img5) : undefined,
+    images: Array.isArray((vehicle as Record<string, unknown>).images)
+      ? ((vehicle as Record<string, unknown>).images as unknown[]).map((image) => resolveImgUrl(image)).filter(Boolean)
+      : undefined,
     seats: Math.max(1, Number(vehicle.seats) || 1),
-    acPricePerKm: Math.max(0, Number(vehicle.acPricePerKm) || 0),
-    acHillPricePerKm: Math.max(0, Number(vehicle.acHillPricePerKm) || 0),
-    nonAcPricePerKm: Math.max(0, Number(vehicle.nonAcPricePerKm) || 0),
-    nonAcHillPricePerKm: Math.max(0, Number(vehicle.nonAcHillPricePerKm) || 0),
-    perKmPrices: normalizePerKmPrices(vehicle.perKmPrices),
-    acAvailable: Boolean(vehicle.acAvailable),
-    nonAcAvailable: Boolean(vehicle.nonAcAvailable),
-    package1Prices: normalizePackagePrices(vehicle.package1Prices),
+    acPricePerKm: readNumber(vehicle.acPricePerKm, (vehicle as Record<string, unknown>).ac_price_per_km),
+    acHillPricePerKm: readNumber(vehicle.acHillPricePerKm, (vehicle as Record<string, unknown>).ac_hill_price_per_km),
+    nonAcPricePerKm: readNumber(vehicle.nonAcPricePerKm, (vehicle as Record<string, unknown>).non_ac_price_per_km),
+    nonAcHillPricePerKm: readNumber(vehicle.nonAcHillPricePerKm, (vehicle as Record<string, unknown>).non_ac_hill_price_per_km),
+    perKmPrices: normalizePerKmPrices(vehicle.perKmPrices ?? (vehicle as Record<string, unknown>).per_km_prices),
+    acAvailable: Boolean(vehicle.acAvailable ?? (vehicle as Record<string, unknown>).ac_available),
+    nonAcAvailable: Boolean(vehicle.nonAcAvailable ?? (vehicle as Record<string, unknown>).non_ac_available),
+    package1Prices: normalizePackagePrices(vehicle.package1Prices ?? (vehicle as Record<string, unknown>).package1_prices),
+    lorryRates: normalizeLorryRates(
+      vehicle.lorryRates
+      ?? (vehicle as Record<string, unknown>).rateTable
+      ?? (vehicle as Record<string, unknown>).rate_table
+      ?? (vehicle as Record<string, unknown>).lorry_rates,
+    ),
   };
+}
+
+function normalizeLorryRates(raw: unknown): LorryRates {
+  const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  return Object.entries(s).reduce<LorryRates>((normalized, [key, row]) => {
+    const data = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+    normalized[key] = {
+      type: String(data.type || key),
+      hillExtraPerKm: Math.max(0, Number(data.hillExtraPerKm ?? data.hill_extra_per_km ?? 10) || 0),
+      start: Math.max(0, Number(data.start) || 0),
+      extra: Math.max(0, Number(data.extra) || 0),
+      upDown: Math.max(0, Number(data.upDown ?? data.up_down) || 0),
+      waiting: Math.max(0, Number(data.waiting) || 0),
+      waitingHour: Math.max(0, Number(data.waitingHour ?? data.waiting_hour) || 0),
+      between100And130: Math.max(0, Number(data.between100And130 ?? data.between_100_130) || 0),
+      maxUpDownKm: Math.max(0, Number(data.maxUpDownKm ?? data.max_up_down_km ?? 150) || 0),
+      dropMinKm: Math.max(0, Number(data.dropMinKm ?? data.drop_min_km ?? 100) || 0),
+      dropMaxKm: Math.max(0, Number(data.dropMaxKm ?? data.drop_max_km ?? 130) || 0),
+    };
+    return normalized;
+  }, {});
+}
+
+function getCache<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const payload = localStorage.getItem(key);
+    if (!payload) return null;
+    const parsed = JSON.parse(payload) as { value?: T; expiresAt?: number };
+    if (!parsed || typeof parsed.expiresAt !== "number" || Date.now() > parsed.expiresAt) return null;
+    return parsed.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function setCache<T>(key: string, value: T) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        value,
+        expiresAt: Date.now() + 5 * 60 * 1000,
+      }),
+    );
+  } catch {
+    // Ignore storage failures.
+  }
 }

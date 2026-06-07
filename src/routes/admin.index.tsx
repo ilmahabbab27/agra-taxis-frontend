@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "re
 import { Car, Download, LogOut, Pencil, Plus } from "lucide-react";
 import { adminLogout, isAdminAuthed } from "@/lib/admin-store";
 import { API_BASE } from "@/lib/api";
+import { EMAIL, PHONE, PHONE_DISPLAY, WHATSAPP } from "@/lib/contact";
 import {
   deleteVehicle,
   deleteVehicleFromDatabase,
   formatLkr,
   getVehicleCategories,
   getVehicleCategoriesFromDatabase,
+  getLorriesFromDatabase,
   getVehiclesFromDatabase,
   getVehicles,
   saveCustomCategory,
@@ -16,6 +18,8 @@ import {
   saveCategoryToDatabase,
   saveVehicleToDatabase,
   type DayPrices,
+  type LorryRateRow,
+  type LorryRates,
   type PackagePrices,
   type PerKmPrices,
   type VehicleCatalogItem,
@@ -40,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const logo = "/assets/logo.jpg";
+const driverSignature = "/assets/image.png";
 
 export { AdminDashboard as default };
 
@@ -53,6 +58,15 @@ const emptyPerKmPrices: PerKmPrices = {
 };
 const emptyPackagePrices: PackagePrices = {
   day1: { ...emptyDayPrices },
+};
+const emptyLorryRates: LorryRates = {
+  "7ft": { type: "7 FT", hillExtraPerKm: 10, start: 2500, extra: 160, upDown: 120, waiting: 600, waitingHour: 600, between100And130: 2500, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "20ft": { type: "20 FT", hillExtraPerKm: 10, start: 18000, extra: 450, upDown: 300, waiting: 1500, waitingHour: 1500, between100And130: 11000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "8.5ft": { type: "8.5 FT", hillExtraPerKm: 10, start: 3500, extra: 180, upDown: 130, waiting: 700, waitingHour: 700, between100And130: 2000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "10.5ft": { type: "10.5 FT", hillExtraPerKm: 10, start: 6000, extra: 230, upDown: 170, waiting: 800, waitingHour: 800, between100And130: 4500, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "12.5ft": { type: "12.5 FT", hillExtraPerKm: 10, start: 7500, extra: 250, upDown: 180, waiting: 800, waitingHour: 800, between100And130: 4500, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "14.5ft": { type: "14.5 FT", hillExtraPerKm: 10, start: 10000, extra: 320, upDown: 210, waiting: 1000, waitingHour: 1000, between100And130: 7000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "16.5ft": { type: "16.5 FT", hillExtraPerKm: 10, start: 11000, extra: 330, upDown: 220, waiting: 1000, waitingHour: 1000, between100And130: 8000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
 };
 
 const emptyVehicleForm: VehicleFormInput = {
@@ -69,6 +83,7 @@ const emptyVehicleForm: VehicleFormInput = {
   acAvailable: true,
   nonAcAvailable: true,
   package1Prices: { ...emptyPackagePrices },
+  lorryRates: { ...emptyLorryRates },
 };
 
 function getPackageDayKeys(prices: PackagePrices): Array<keyof PackagePrices> {
@@ -80,6 +95,144 @@ function getPackageDayKeys(prices: PackagePrices): Array<keyof PackagePrices> {
 
 function getPackageDayNumbers(prices: PackagePrices): number[] {
   return getPackageDayKeys(prices).map((key) => Number(String(key).replace("day", "")));
+}
+
+type AdminTab = "vehicles" | "lorries" | "invoices";
+type ImageSlot = "img" | "img2" | "img3" | "img4" | "img5";
+type LorryImageForm = Pick<VehicleFormInput, ImageSlot>;
+
+type QuotationForm = {
+  documentType: "Quotation" | "Invoice";
+  date: string;
+  vehicleNo: string;
+  cabNo: string;
+  tel: string;
+  customerName: string;
+  vehicle: string;
+  description: string;
+  pickup: string;
+  destination: string;
+  days: string;
+  noOfKms: string;
+  meterReadingStart: string;
+  meterReadingEnd: string;
+  firstKms: string;
+  extraKms: string;
+  packageHours: string;
+  packageWith: string;
+  extraHours: string;
+  loadingCharges: string;
+  pickupCharges: string;
+  rate: string;
+  amount: string;
+  notes: string;
+};
+
+const emptyQuotationForm: QuotationForm = {
+  documentType: "Quotation",
+  date: "",
+  vehicleNo: "",
+  cabNo: "",
+  tel: "",
+  customerName: "",
+  vehicle: "",
+  description: "",
+  pickup: "",
+  destination: "",
+  days: "1",
+  noOfKms: "",
+  meterReadingStart: "",
+  meterReadingEnd: "",
+  firstKms: "",
+  extraKms: "",
+  packageHours: "",
+  packageWith: "",
+  extraHours: "",
+  loadingCharges: "",
+  pickupCharges: "",
+  rate: "",
+  amount: "",
+  notes: "",
+};
+
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function formatQuotationMoney(value: string, fallback = "") {
+  if (!value.trim()) return fallback;
+  const numericValue = Number(value.replace(/,/g, "").trim());
+  if (!Number.isFinite(numericValue)) return value;
+  return `Rs. ${numericValue.toLocaleString("en-LK")}`;
+}
+
+function formatQuotationNumber(value: string, fallback = "0") {
+  if (!value.trim()) return fallback;
+  const numericValue = Number(value.replace(/,/g, "").trim());
+  if (!Number.isFinite(numericValue)) return value;
+  return numericValue.toLocaleString("en-LK");
+}
+
+function printQuotationDraft(form: QuotationForm) {
+  if (typeof window === "undefined") return;
+  const popup = window.open("", "_blank", "width=900,height=1200");
+  if (!popup) return;
+  const issueDate = form.date || new Date().toLocaleDateString();
+  const issueTime = new Date().toLocaleTimeString();
+  const ref = `${form.documentType === "Invoice" ? "INV" : "Q"}-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+  const amount = formatQuotationNumber(form.amount);
+  const rate = formatQuotationMoney(form.rate);
+  const esc = escapeHtml;
+
+  popup.document.write(`
+    <html><head><title>${ref}</title><style>
+      @page { size: A4; margin: 14mm; }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; margin: 0; color: #111827; background: #fff; }
+      .page { width: 100%; max-width: 760px; margin: 0 auto; }
+      .header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+      .brand { display:flex; align-items:center; gap:12px; min-width:0; }
+      .logo { width:72px; height:72px; object-fit:contain; border:1px solid #d1d5db; background:#fff; flex:0 0 auto; }
+      .titleblock { min-width:0; }
+      .titleblock h1 { margin:0; font-size:24px; line-height:1.1; }
+      .titleblock p { margin:4px 0 0; max-width:360px; font-size:11px; color:#4b5563; line-height:1.4; white-space:normal; }
+      .meta { text-align:right; font-size:11px; line-height:1.5; color:#374151; }
+      .rule { border-top:1px solid #111827; margin:10px 0 14px; }
+      .line-row { font-size:11px; margin:8px 0; line-height:1.5; }
+      .line { display:inline-block; min-width:120px; border-bottom:1px solid #111827; min-height:14px; vertical-align:bottom; }
+      .line.xl { min-width:360px; }
+      table { width:100%; border-collapse:collapse; margin-top:12px; font-size:11px; }
+      th, td { border:1px solid #111827; padding:7px 8px; vertical-align:top; }
+      th { text-align:left; background:#f3f4f6; }
+      .sig { display:flex; justify-content:space-between; gap:28px; margin-top:34px; }
+      .sig > div { position:relative; flex:1; text-align:center; font-size:11px; }
+      .signature-img { position:absolute; left:50%; bottom:22px; transform:translateX(-50%); width:120px; height:42px; object-fit:contain; }
+      .sigline { margin-top:34px; border-top:1px solid #111827; padding-top:6px; }
+      .small { font-size:10px; color:#4b5563; }
+    </style></head><body><div class="page">
+      <div class="header"><div class="brand"><img class="logo" src="${logo}" alt="Agra Taxis" /><div class="titleblock"><h1>Agra Taxis</h1><p>Sri Lanka's trusted islandwide vehicle rental and taxi service<br/>${form.documentType}</p></div></div><div class="meta"><div><strong>${ref}</strong></div><div>DATE : ${esc(issueDate)}</div><div>TIME : ${issueTime}</div></div></div>
+      <div class="rule"></div>
+      <div class="line-row">DATE : <span class="line">${esc(issueDate)}</span> VEHICLE NO : <span class="line">${esc(form.vehicleNo)}</span> CAB NO. : <span class="line">${esc(form.cabNo)}</span> TEL : <span class="line">${esc(form.tel)}</span></div>
+      <div class="line-row">Customer's Name : <span class="line xl">${esc(form.customerName)}</span></div>
+      <div class="line-row">Description : <span class="line xl">${esc(form.description || form.vehicle)}</span></div>
+      <div class="line-row">No. Of Kms : <span class="line xl">${esc(form.noOfKms || form.days)}</span></div>
+      <div class="line-row">Meter Reading Start : <span class="line xl">${esc(form.meterReadingStart)}</span></div>
+      <div class="line-row">Meter Reading End : <span class="line xl">${esc(form.meterReadingEnd)}</span></div>
+      <table><thead><tr><th style="width:55%;">DESCRIPTION</th><th style="width:22%;">RATE</th><th style="width:23%;">AMOUNT</th></tr></thead><tbody>
+        <tr><td>For First ${esc(form.firstKms || "..............................")} Kms</td><td>${esc(rate)}</td><td>Rs. ${amount}</td></tr>
+        <tr><td>Extra Additional ${esc(form.extraKms || "...............................")} Kms</td><td>${esc(rate)}</td><td>${esc(formatQuotationMoney(form.extraKms))}</td></tr>
+        <tr><td>${esc(form.packageHours || "............................")} Hrs Package With ${esc(form.packageWith || "............................")}</td><td>${esc(rate)}</td><td></td></tr>
+        <tr><td>Extra Additional ${esc(form.extraHours || "...............................")} Hrs</td><td>${esc(rate)}</td><td></td></tr>
+        <tr><td>Loading Charges</td><td></td><td>${esc(formatQuotationMoney(form.loadingCharges))}</td></tr>
+        <tr><td>Pickup Charges</td><td></td><td>${esc(formatQuotationMoney(form.pickupCharges))}</td></tr>
+        <tr><td><strong>Total</strong></td><td></td><td><strong>Rs. ${amount}</strong></td></tr>
+      </tbody></table>
+      ${form.notes ? `<div class="line-row" style="margin-top:12px;"><strong>Notes:</strong> ${esc(form.notes)}</div>` : ""}
+      <div class="sig"><div><div class="sigline">Customer's Signature</div></div><div><img class="signature-img" src="${driverSignature}" alt="Driver signature" /><div class="sigline">Driver's Sig</div></div></div>
+      <div class="small" style="margin-top:16px;">Generated from the admin panel. Save or print as PDF from the browser dialog.</div>
+    </div><script>window.onload = () => { window.print(); setTimeout(() => window.close(), 250); };</script></body></html>
+  `);
+  popup.document.close();
 }
 
 function AdminDashboard() {
@@ -95,8 +248,21 @@ function AdminDashboard() {
   const [categoryFilter, setCategoryFilter] = useState<"All" | string>("All");
   const [seatFilter, setSeatFilter] = useState("all");
   const [comfortFilter, setComfortFilter] = useState<"all" | "ac" | "nonAc">("all");
+  const [activeTab, setActiveTab] = useState<AdminTab>("vehicles");
+  const [quotationForm, setQuotationForm] = useState<QuotationForm>(emptyQuotationForm);
+  const [lorryRates, setLorryRates] = useState<LorryRates>(emptyLorryRates);
+  const [lorryImageForm, setLorryImageForm] = useState<LorryImageForm>({
+    img: "/assets/car.jpg",
+    img2: undefined,
+    img3: undefined,
+    img4: undefined,
+    img5: undefined,
+  });
+  const [isLorryEditing, setIsLorryEditing] = useState(false);
+  const [lorrySaveStatus, setLorrySaveStatus] = useState("");
   const [ready, setReady] = useState(false);
   const [imageUploading, setImageUploading] = useState<"img" | "img2" | null>(null);
+  const [lorryImageUploading, setLorryImageUploading] = useState<ImageSlot | null>(null);
 
   useEffect(() => {
     if (!isAdminAuthed()) {
@@ -109,20 +275,56 @@ function AdminDashboard() {
 
   async function refreshVehicles() {
     try {
-      const [vehicles, categories] = await Promise.all([
+      const [vehicles, categories, lorries] = await Promise.all([
         getVehiclesFromDatabase(),
         getVehicleCategoriesFromDatabase(),
+        getLorriesFromDatabase(),
       ]);
-      setAdminVehicles(vehicles);
+      const byName = new Map<string, VehicleCatalogItem>();
+      [...vehicles, ...lorries].forEach((vehicle) => byName.set(vehicle.name, vehicle));
+      const lorryWithRates = lorries.find((vehicle) => vehicle.lorryRates && Object.keys(vehicle.lorryRates).length);
+      const firstLorry = lorryWithRates ?? lorries[0];
+      setAdminVehicles(Array.from(byName.values()));
+      setLorryRates(lorryWithRates?.lorryRates ?? emptyLorryRates);
+      if (firstLorry) {
+        setLorryImageForm({
+          img: firstLorry.img,
+          img2: firstLorry.img2,
+          img3: firstLorry.img3,
+          img4: firstLorry.img4,
+          img5: firstLorry.img5,
+        });
+      }
       setCategoryOptions(categories);
     } catch {
-      setAdminVehicles(getVehicles());
+      const fallbackVehicles = getVehicles();
+      const firstLorry = fallbackVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+      setAdminVehicles(fallbackVehicles);
+      if (firstLorry) {
+        setLorryRates(firstLorry.lorryRates ?? emptyLorryRates);
+        setLorryImageForm({
+          img: firstLorry.img,
+          img2: firstLorry.img2,
+          img3: firstLorry.img3,
+          img4: firstLorry.img4,
+          img5: firstLorry.img5,
+        });
+      }
       setCategoryOptions(getVehicleCategories());
     }
   }
 
   function updateVehicleForm<K extends keyof VehicleFormInput>(key: K, value: VehicleFormInput[K]) {
     setVehicleForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function updateQuotationForm<K extends keyof QuotationForm>(key: K, value: QuotationForm[K]) {
+    setQuotationForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function onQuotationSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    printQuotationDraft(quotationForm);
   }
 
   function updatePackagePrice(
@@ -187,6 +389,56 @@ function AdminDashboard() {
     }));
   }
 
+  function updateLorryRate(key: string, field: keyof LorryRateRow, value: string | number) {
+    setLorryRates((current) => ({
+      ...current,
+      [key]: {
+        ...(current[key] ?? emptyLorryRates["7ft"]),
+        [field]: field === "type" ? String(value) : Number(value),
+      },
+    }));
+  }
+
+  function updateAllLorryRates(field: "hillExtraPerKm" | "maxUpDownKm" | "dropMinKm" | "dropMaxKm", value: number) {
+    setLorryRates((current) => Object.fromEntries(
+      Object.entries(current).map(([key, row]) => [key, { ...row, [field]: value }]),
+    ) as LorryRates);
+  }
+
+  function updateLorryImageForm(key: ImageSlot, value: string | undefined) {
+    setLorryImageForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function saveLorryRates() {
+    setLorrySaveStatus("Saving...");
+    const existingLorry = adminVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+    const lorryVehicle: VehicleFormInput = {
+      ...(existingLorry ?? emptyVehicleForm),
+      name: existingLorry?.name || "Lorry Rates",
+      category: existingLorry?.category || "Lorries",
+      img: lorryImageForm.img || existingLorry?.img || "/assets/car.jpg",
+      img2: lorryImageForm.img2,
+      img3: lorryImageForm.img3,
+      img4: lorryImageForm.img4,
+      img5: lorryImageForm.img5,
+      seats: existingLorry?.seats || 2,
+      acAvailable: existingLorry?.acAvailable ?? true,
+      nonAcAvailable: existingLorry?.nonAcAvailable ?? true,
+      lorryRates,
+    };
+    try {
+      await saveVehicleToDatabase(lorryVehicle, existingLorry?.id);
+      await refreshVehicles();
+      setLorrySaveStatus("Saved");
+      setIsLorryEditing(false);
+    } catch {
+      saveCustomVehicle(lorryVehicle);
+      await refreshVehicles();
+      setLorrySaveStatus("Saved locally");
+      setIsLorryEditing(false);
+    }
+  }
+
   async function onVehicleImageUpload(file: File | undefined, target: "img" | "img2") {
     if (!file || !file.type.startsWith("image/")) return;
     setImageUploading(target);
@@ -211,6 +463,32 @@ function AdminDashboard() {
       reader.readAsDataURL(file);
     } finally {
       setImageUploading(null);
+    }
+  }
+
+  async function onLorryImageUpload(file: File | undefined, target: ImageSlot) {
+    if (!file || !file.type.startsWith("image/")) return;
+    setLorryImageUploading(target);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const response = await fetch(`${API_BASE}/vehicles/image`, {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: formData,
+      });
+      if (!response.ok) throw new Error("Image upload failed");
+      const payload = await response.json() as { url: string };
+      const fullUrl = API_BASE.replace(/\/api$/, "") + payload.url;
+      updateLorryImageForm(target, fullUrl);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") updateLorryImageForm(target, reader.result);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setLorryImageUploading(null);
     }
   }
 
@@ -282,12 +560,31 @@ function AdminDashboard() {
     navigate("/admin/login");
   }
 
-  function exportJson() {
+  async function exportJson() {
+    let vehicles = adminVehicles;
+    let lorries = adminVehicles.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+
+    try {
+      const [vehicleData, lorryData] = await Promise.all([getVehiclesFromDatabase(), getLorriesFromDatabase()]);
+      vehicles = vehicleData;
+      lorries = lorryData;
+    } catch {
+      // fall back to the already loaded in-memory data
+    }
+
     const payload = {
       exportedAt: new Date().toISOString(),
-      vehicles: adminVehicles,
+      company: {
+        name: "Agra Taxis",
+        phone: PHONE,
+        phoneDisplay: PHONE_DISPLAY,
+        whatsapp: WHATSAPP,
+        email: EMAIL,
+      },
+      lorries,
+      vehicles,
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -303,6 +600,7 @@ function AdminDashboard() {
   const filteredVehicles = useMemo(() => {
     const q = search.trim().toLowerCase();
     return adminVehicles.filter((vehicle) => {
+      if (vehicle.category.toLowerCase().includes("lorry")) return false;
       if (q && ![vehicle.name, vehicle.category].some((value) => value.toLowerCase().includes(q))) {
         return false;
       }
@@ -313,6 +611,25 @@ function AdminDashboard() {
       return true;
     });
   }, [adminVehicles, categoryFilter, comfortFilter, search, seatFilter]);
+
+  const filteredLorries = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return adminVehicles.filter((vehicle) => {
+      if (!vehicle.category.toLowerCase().includes("lorry")) return false;
+      if (q && ![vehicle.name, vehicle.category].some((value) => value.toLowerCase().includes(q))) {
+        return false;
+      }
+      if (seatFilter !== "all" && vehicle.seats !== Number(seatFilter)) return false;
+      if (comfortFilter === "ac" && !vehicle.acAvailable) return false;
+      if (comfortFilter === "nonAc" && !vehicle.nonAcAvailable) return false;
+      return true;
+    });
+  }, [adminVehicles, comfortFilter, search, seatFilter]);
+
+  const passengerVehicleCount = adminVehicles.filter((vehicle) => !vehicle.category.toLowerCase().includes("lorry")).length;
+  const lorryCount = adminVehicles.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry")).length;
+  const visibleFleetItems = filteredVehicles;
+  const isFleetTab = activeTab === "vehicles";
 
   if (!ready) return null;
 
@@ -333,7 +650,7 @@ function AdminDashboard() {
           </Link>
           <div className="flex items-center gap-2">
             <button
-              onClick={exportJson}
+              onClick={() => void exportJson()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gold/25 bg-gold/8 px-3 py-1.5 text-xs font-semibold text-gold/90 transition-all hover:border-gold/40 hover:bg-gold/15"
             >
               <Download className="h-3.5 w-3.5" /> Export
@@ -352,31 +669,56 @@ function AdminDashboard() {
 
         {/* Page title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold tracking-tight text-charcoal">Fleet Management</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">Manage vehicles, categories and pricing shown on the public site.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-charcoal">Admin Panel</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">Manage vehicles, lorries, categories and pricing.</p>
+        </div>
+
+        <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-border bg-white p-2 shadow-soft">
+          {[
+            { id: "vehicles" as const, label: "Vehicles" },
+            { id: "lorries" as const, label: "Lorries" },
+            { id: "invoices" as const, label: "Invoices / Quotations" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                activeTab === tab.id
+                  ? "bg-charcoal text-white"
+                  : "text-muted-foreground hover:bg-[#f0f2f5] hover:text-charcoal"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {/* Stats row */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {isFleetTab && <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Total Vehicles", value: adminVehicles.length, accent: false },
+            { label: "Total Vehicles", value: passengerVehicleCount, accent: false },
+            { label: "Total Lorries", value: lorryCount, accent: false },
             { label: "Categories", value: categoryOptions.filter(c => c !== "All").length, accent: false },
-            { label: "AC Available", value: adminVehicles.filter(v => v.acAvailable).length, accent: false },
-            { label: "Filtered Results", value: filteredVehicles.length, accent: true },
+            { label: "Filtered Results", value: visibleFleetItems.length, accent: true },
           ].map(({ label, value, accent }) => (
             <div key={label} className={`rounded-xl border px-4 py-3.5 ${accent ? "border-gold/20 bg-gold/5" : "border-border bg-white shadow-soft"}`}>
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
               <p className={`mt-1 text-3xl font-bold ${accent ? "text-gold" : "text-charcoal"}`}>{value}</p>
             </div>
           ))}
-        </div>
+        </div>}
 
-        <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+        {isFleetTab && <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
           {/* Section toolbar */}
           <div className="flex flex-col gap-3 border-b border-border bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-base font-bold text-charcoal">Vehicles</h2>
-              <p className="text-xs text-muted-foreground">{adminVehicles.length} vehicles across {categoryOptions.filter(c => c !== "All").length} categories</p>
+              <h2 className="text-base font-bold text-charcoal">{activeTab === "lorries" ? "Lorries" : "Vehicles"}</h2>
+              <p className="text-xs text-muted-foreground">
+                {activeTab === "lorries"
+                  ? `${lorryCount} lorries available for lorry bookings`
+                  : `${passengerVehicleCount} vehicles across ${categoryOptions.filter(c => c !== "All").length} categories`}
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <form onSubmit={onCategorySubmit} className="flex gap-2">
@@ -392,10 +734,16 @@ function AdminDashboard() {
               </form>
               <button
                 type="button"
-                onClick={openAddVehicleDialog}
+                onClick={() => {
+                  resetVehicleForm();
+                  if (activeTab === "lorries") {
+                    setVehicleForm((current) => ({ ...current, category: "Lorries" }));
+                  }
+                  setIsVehicleDialogOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               >
-                <Plus className="h-3.5 w-3.5" /> Add Vehicle
+                <Plus className="h-3.5 w-3.5" /> {activeTab === "lorries" ? "Add Lorry" : "Add Vehicle"}
               </button>
             </div>
           </div>
@@ -430,7 +778,7 @@ function AdminDashboard() {
           {/* Vehicle grid */}
           <div className="p-5">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredVehicles.map((vehicle) => (
+              {visibleFleetItems.map((vehicle) => (
                 <div key={vehicle.name} className="group overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card">
                   <div className="relative h-44 overflow-hidden bg-secondary">
                     <img src={vehicle.img} alt={vehicle.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -484,20 +832,147 @@ function AdminDashboard() {
               ))}
             </div>
 
-            {filteredVehicles.length === 0 && (
+            {visibleFleetItems.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="mb-4 rounded-full border border-border bg-[#f8f9fb] p-5">
                   <Car className="h-8 w-8 text-muted-foreground/40" />
                 </div>
-                <p className="font-semibold text-charcoal">No vehicles found</p>
-                <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filters or add a new vehicle.</p>
-                <button onClick={openAddVehicleDialog} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90">
-                  <Plus className="h-3.5 w-3.5" /> Add Vehicle
+                <p className="font-semibold text-charcoal">No {activeTab === "lorries" ? "lorries" : "vehicles"} found</p>
+                <p className="mt-1 text-sm text-muted-foreground">Try adjusting your filters or add a new {activeTab === "lorries" ? "lorry" : "vehicle"}.</p>
+                <button
+                  onClick={() => {
+                    resetVehicleForm();
+                    if (activeTab === "lorries") setVehicleForm((current) => ({ ...current, category: "Lorries" }));
+                    setIsVehicleDialogOpen(true);
+                  }}
+                  className="mt-4 inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add {activeTab === "lorries" ? "Lorry" : "Vehicle"}
                 </button>
               </div>
             )}
           </div>
-        </section>
+        </section>}
+
+        {activeTab === "lorries" && (
+          <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+            <div className="border-b border-border px-5 py-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-charcoal">Lorry Rates</h2>
+                  <p className="text-xs text-muted-foreground">Vehicle-specific rate table. Add one row per lorry type.</p>
+                </div>
+                {!isLorryEditing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLorryEditing(true);
+                      setLorrySaveStatus("");
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                  >
+                    <Pencil className="h-4 w-4" /> Edit
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="p-5">
+              <div className="mb-5 rounded-xl border border-border bg-[#f8f9fb] p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lorry Images</p>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                  {([
+                    ["img", "Primary image"],
+                    ["img2", "Second image"],
+                    ["img3", "Third image"],
+                    ["img4", "Fourth image"],
+                    ["img5", "Fifth image"],
+                  ] as Array<[ImageSlot, string]>).map(([slot, label]) => (
+                    <VehicleImageInput
+                      key={slot}
+                      label={label}
+                      image={lorryImageForm[slot]}
+                      alt={`Lorry ${label.toLowerCase()}`}
+                      uploading={lorryImageUploading === slot}
+                      disabled={!isLorryEditing || Boolean(lorryImageUploading)}
+                      onUpload={(file) => onLorryImageUpload(file, slot)}
+                    />
+                  ))}
+                </div>
+              </div>
+              <LorryRateEditorTable
+                rates={lorryRates}
+                onChange={updateLorryRate}
+                onChangeAll={updateAllLorryRates}
+                disabled={!isLorryEditing}
+              />
+              <div className="mt-4 flex items-center justify-end gap-3">
+                {lorrySaveStatus && <p className="text-xs font-medium text-muted-foreground">{lorrySaveStatus}</p>}
+                {isLorryEditing && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLorryEditing(false);
+                      setLorrySaveStatus("");
+                      void refreshVehicles();
+                    }}
+                    className="rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-charcoal hover:bg-accent"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={!isLorryEditing}
+                  onClick={() => void saveLorryRates()}
+                  className="rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Save Lorry Rates
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {activeTab === "invoices" && (
+          <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
+            <div className="border-b border-border px-5 py-4">
+              <h2 className="text-base font-bold text-charcoal">Invoices / Quotations</h2>
+              <p className="text-xs text-muted-foreground">Fill the blanks and download a printable PDF. Nothing is saved.</p>
+            </div>
+            <div className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)] lg:p-6">
+              <form onSubmit={onQuotationSubmit} className="grid gap-5 sm:grid-cols-2">
+                <AdminField label="Document Type"><select value={quotationForm.documentType} onChange={(event) => updateQuotationForm("documentType", event.target.value as QuotationForm["documentType"])} className={adminInputClass}><option value="Quotation">Quotation</option><option value="Invoice">Invoice</option></select></AdminField>
+                <AdminField label="Date"><input value={quotationForm.date} onChange={(event) => updateQuotationForm("date", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Vehicle No"><input value={quotationForm.vehicleNo} onChange={(event) => updateQuotationForm("vehicleNo", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Cab No"><input value={quotationForm.cabNo} onChange={(event) => updateQuotationForm("cabNo", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="TEL"><input value={quotationForm.tel} onChange={(event) => updateQuotationForm("tel", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Customer Name"><input required value={quotationForm.customerName} onChange={(event) => updateQuotationForm("customerName", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Vehicle"><input required value={quotationForm.vehicle} onChange={(event) => updateQuotationForm("vehicle", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Description"><input value={quotationForm.description} onChange={(event) => updateQuotationForm("description", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Pickup"><input required value={quotationForm.pickup} onChange={(event) => updateQuotationForm("pickup", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Destination"><input required value={quotationForm.destination} onChange={(event) => updateQuotationForm("destination", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Days"><input type="number" min={1} value={quotationForm.days} onChange={(event) => updateQuotationForm("days", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="No. Of Kms"><input value={quotationForm.noOfKms} onChange={(event) => updateQuotationForm("noOfKms", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Meter Reading Start"><input value={quotationForm.meterReadingStart} onChange={(event) => updateQuotationForm("meterReadingStart", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Meter Reading End"><input value={quotationForm.meterReadingEnd} onChange={(event) => updateQuotationForm("meterReadingEnd", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Rate"><input value={quotationForm.rate} onChange={(event) => updateQuotationForm("rate", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="First Kms"><input value={quotationForm.firstKms} onChange={(event) => updateQuotationForm("firstKms", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Extra Kms"><input value={quotationForm.extraKms} onChange={(event) => updateQuotationForm("extraKms", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Package Hours"><input value={quotationForm.packageHours} onChange={(event) => updateQuotationForm("packageHours", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Package With"><input value={quotationForm.packageWith} onChange={(event) => updateQuotationForm("packageWith", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Extra Hours"><input value={quotationForm.extraHours} onChange={(event) => updateQuotationForm("extraHours", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Loading Charges"><input value={quotationForm.loadingCharges} onChange={(event) => updateQuotationForm("loadingCharges", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Pickup Charges"><input value={quotationForm.pickupCharges} onChange={(event) => updateQuotationForm("pickupCharges", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Amount (Rs.)"><input required type="number" min={0} value={quotationForm.amount} onChange={(event) => updateQuotationForm("amount", event.target.value)} className={adminInputClass} /></AdminField>
+                <AdminField label="Notes" className="sm:col-span-2"><textarea value={quotationForm.notes} onChange={(event) => updateQuotationForm("notes", event.target.value)} className={`${adminInputClass} min-h-28`} /></AdminField>
+                <div className="sm:col-span-2 flex justify-end">
+                  <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90"><Download className="h-4 w-4" /> Download PDF</button>
+                </div>
+              </form>
+              <InvoicePreview form={quotationForm} />
+            </div>
+          </section>
+        )}
 
         <Dialog
           open={isVehicleDialogOpen}
@@ -773,6 +1248,88 @@ function AdminField({
   );
 }
 
+function PreviewField({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-[#f8f9fb] px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-medium text-charcoal">{value}</p>
+    </div>
+  );
+}
+
+function InvoicePreview({ form }: { form: QuotationForm }) {
+  const rate = formatQuotationMoney(form.rate);
+  const amount = formatQuotationNumber(form.amount);
+
+  return (
+    <div className="rounded-2xl border border-border bg-white p-4 shadow-soft">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold text-charcoal">Live Preview</h3>
+          <p className="text-xs text-muted-foreground">Updates as you type</p>
+        </div>
+        <p className="rounded-full bg-[#f8f9fb] px-3 py-1 text-xs font-semibold text-muted-foreground">{form.documentType}</p>
+      </div>
+      <div className="rounded-xl border border-border bg-white p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="Agra Taxis" className="h-12 w-12 rounded-lg border border-border bg-white object-contain" />
+            <div>
+              <p className="text-lg font-bold text-charcoal">Agra Taxis</p>
+              <p className="text-xs text-muted-foreground">Sri Lanka's trusted islandwide vehicle rental and taxi service</p>
+              <p className="text-xs font-semibold text-muted-foreground">{form.documentType}</p>
+            </div>
+          </div>
+          <div className="text-right text-xs text-muted-foreground">
+            <p>DATE : {form.date || "........................"}</p>
+            <p>VEHICLE NO : {form.vehicleNo || "........................"}</p>
+            <p>CAB NO : {form.cabNo || "........................"}</p>
+            <p>TEL : {form.tel || "........................"}</p>
+          </div>
+        </div>
+
+        <div className="my-4 border-t border-border" />
+
+        <div className="grid gap-3 text-sm sm:grid-cols-2">
+          <PreviewField label="Customer's Name" value={form.customerName || "...................."} />
+          <PreviewField label="Description" value={form.description || form.vehicle || "...................."} />
+          <PreviewField label="No. Of Kms" value={form.noOfKms || form.days || "...................."} />
+          <PreviewField label="Meter Reading Start" value={form.meterReadingStart || "...................."} />
+          <PreviewField label="Meter Reading End" value={form.meterReadingEnd || "...................."} />
+          <PreviewField label="Rate" value={formatQuotationMoney(form.rate, "....................")} />
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-[2fr_1fr_1fr] bg-[#f8f9fb] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div>Description</div>
+            <div>Rate</div>
+            <div>Amount</div>
+          </div>
+          {[
+            [`For First ${form.firstKms || ".............................."} Kms`, rate, `Rs. ${amount}`],
+            [`Extra Additional ${form.extraKms || "..............................."} Kms`, rate, formatQuotationMoney(form.extraKms)],
+            [`${form.packageHours || "............................"} Hrs Package With ${form.packageWith || "............................"}`, rate, ""],
+            [`Extra Additional ${form.extraHours || "..............................."} Hrs`, rate, ""],
+            ["Loading Charges", "", formatQuotationMoney(form.loadingCharges)],
+            ["Pickup Charges", "", formatQuotationMoney(form.pickupCharges)],
+          ].map(([desc, rowRate, rowAmount]) => (
+            <div key={desc} className="grid grid-cols-[2fr_1fr_1fr] border-t border-border px-3 py-2 text-xs">
+              <div>{desc}</div>
+              <div>{rowRate}</div>
+              <div>{rowAmount}</div>
+            </div>
+          ))}
+          <div className="grid grid-cols-[2fr_1fr_1fr] border-t border-border bg-[#f8f9fb] px-3 py-2 text-xs font-bold">
+            <div>Total</div>
+            <div />
+            <div>Rs. {amount}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VehicleImageInput({
   label,
   image,
@@ -915,3 +1472,118 @@ function PackagePriceTable({
     </div>
   );
 }
+
+function LorryRateEditorTable({
+  rates,
+  onChange,
+  onChangeAll,
+  disabled = false,
+}: {
+  rates: LorryRates;
+  onChange: (key: string, field: keyof LorryRateRow, value: string | number) => void;
+  onChangeAll: (field: "hillExtraPerKm" | "maxUpDownKm" | "dropMinKm" | "dropMaxKm", value: number) => void;
+  disabled?: boolean;
+}) {
+  const rows = Object.entries(rates);
+  const firstRow = rows[0]?.[1] ?? emptyLorryRates["7ft"];
+  const columns: Array<{ key: keyof LorryRateRow; label: string; type?: "text" | "number" }> = [
+    { key: "type", label: "Type", type: "text" },
+    { key: "hillExtraPerKm", label: "Hill / KM" },
+    { key: "start", label: "Start" },
+    { key: "extra", label: "Extra" },
+    { key: "upDown", label: "Up & Down" },
+    { key: "waiting", label: "Waiting" },
+    { key: "waitingHour", label: "Waiting Hour" },
+    { key: "between100And130", label: "Between 100-130 KM" },
+    { key: "maxUpDownKm", label: "Up/Down Limit" },
+    { key: "dropMinKm", label: "Drop Min" },
+    { key: "dropMaxKm", label: "Drop Max" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-border p-4">
+      <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lorry Rates</p>
+          <p className="text-sm font-semibold text-charcoal">Vehicle-specific rate table</p>
+        </div>
+        <p className="text-xs font-medium text-muted-foreground">Add one row per lorry type</p>
+      </div>
+
+      <div className="mb-6 grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
+        <AdminField label="Hill surcharge per km">
+          <input
+            type="number"
+            min={0}
+            value={firstRow.hillExtraPerKm}
+            disabled={disabled}
+            onChange={(event) => onChangeAll("hillExtraPerKm", Number(event.target.value))}
+            className={adminInputClass}
+          />
+        </AdminField>
+        <AdminField label="Up & down limit km">
+          <input
+            type="number"
+            min={0}
+            value={firstRow.maxUpDownKm}
+            disabled={disabled}
+            onChange={(event) => onChangeAll("maxUpDownKm", Number(event.target.value))}
+            className={adminInputClass}
+          />
+        </AdminField>
+        <AdminField label="Drop range">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="number"
+              min={0}
+              value={firstRow.dropMinKm}
+              disabled={disabled}
+              onChange={(event) => onChangeAll("dropMinKm", Number(event.target.value))}
+              className={adminInputClass}
+            />
+            <input
+              type="number"
+              min={0}
+              value={firstRow.dropMaxKm}
+              disabled={disabled}
+              onChange={(event) => onChangeAll("dropMaxKm", Number(event.target.value))}
+              className={adminInputClass}
+            />
+          </div>
+        </AdminField>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1180px] border-collapse text-sm">
+          <thead>
+            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+              {columns.map((column) => (
+                <th key={column.key} className="px-2 py-2 font-semibold">{column.label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([key, row]) => (
+              <tr key={key} className="border-b border-border/70 last:border-0">
+                {columns.map((column) => (
+                  <td key={column.key} className="px-2 py-2">
+                    <input
+                      type={column.type === "text" ? "text" : "number"}
+                      min={column.type === "text" ? undefined : 0}
+                      value={row[column.key]}
+                      disabled={disabled}
+                      onChange={(event) => onChange(key, column.key, column.type === "text" ? event.target.value : Number(event.target.value))}
+                      className="w-full rounded-xl border border-border bg-background px-3 py-3 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-70"
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+
