@@ -57,6 +57,14 @@ type PricingSummary = {
   pickupPin: PinPoint | null;
   destinationPin: PinPoint | null;
   distanceSource: "route" | "straight" | undefined;
+  serviceType: "Passenger" | "Lorry";
+  lorryType?: string;
+  lorryStartCharge?: number;
+  lorryExtraKm?: number;
+  lorryExtraCharge?: number;
+  lorryHillCharge?: number;
+  lorryDropMaxKm?: number;
+  lorryHillExtraPerKm?: number;
 };
 
 const INCLUDED_KM_PER_DAY = 150;
@@ -185,7 +193,7 @@ export function BookingForm() {
   const [vehicleList, setVehicleList] = useState<VehicleCatalogItem[]>(() => getVehicles());
   const [categoryList, setCategoryList] = useState(() => getVehicleCategories());
   const [form, setForm] = useState({
-    serviceType: "Passenger",
+    serviceType: "Passenger" as "Passenger" | "Lorry",
     vehicle: vehicleList[0]?.name || "",
     pickup: "",
     destination: "",
@@ -431,44 +439,43 @@ export function BookingForm() {
                                                                                 : null;
                                                                                     const activeLorryRate = resolvedLorryRate;
                                                                                         const activeLorryType = activeLorryRate?.type || "7 FT";
-                                                                                            const lorryFare = totalKm && activeLorryRate
-                                                                                                  ? (() => {
-                                                                                                            let fare = 0;
-          const isRoundTrip = form.trip === 'round-trip';
-          const days = Number(form.days || 1);
 
-          // Determine base rate based on distance
-          if (totalKm >= 100 && totalKm <= 130) {
-            // Use the "Between 100-130 KM" fixed rate
-            fare = activeLorryRate.between100And130;
-          } else if (totalKm > 130) {
-            // For trips over 130 KM, use per-km rate without standard start fee
-            fare = totalKm * activeLorryRate.extra;
-          } else {
-            // Standard calculation: Start fee + extra KM charges
-            fare = activeLorryRate.start;
-            const extraKm = Math.max(totalKm - activeLorryRate.dropMinKm, 0);
-            fare += extraKm * activeLorryRate.extra;
+          const lorryIsRoundTrip = form.trip === 'round-trip';
+          const lorryDays = Number(form.days || 1);
+          const lorryDropMaxKm = activeLorryRate?.dropMaxKm ?? 130;
+          const lorryMaxUpDownKm = activeLorryRate?.maxUpDownKm ?? 150;
+          let lorryStartCharge = 0;
+          let lorryExtraKm = 0;
+          let lorryExtraCharge = 0;
+
+          if (totalKm && activeLorryRate) {
+            if (lorryIsRoundTrip) {
+              if (totalKm <= lorryMaxUpDownKm && activeLorryRate.upDown) {
+                lorryStartCharge = activeLorryRate.upDown;
+              } else {
+                lorryStartCharge = activeLorryRate.upDown || activeLorryRate.start;
+                if (totalKm > lorryMaxUpDownKm) {
+                  lorryExtraKm = Math.max(totalKm - lorryMaxUpDownKm, 0);
+                  lorryExtraCharge = lorryExtraKm * activeLorryRate.extra;
+                }
+              }
+            } else if (activeLorryRate.between100And130 && totalKm >= 100 && totalKm <= 130) {
+              lorryStartCharge = activeLorryRate.between100And130;
+            } else if (totalKm <= lorryDropMaxKm) {
+              lorryStartCharge = activeLorryRate.start;
+            } else {
+              lorryStartCharge = activeLorryRate.start;
+              lorryExtraKm = Math.max(totalKm - lorryDropMaxKm, 0);
+              lorryExtraCharge = lorryExtraKm * activeLorryRate.extra;
+            }
           }
 
-          // Apply Up & Down rate for round trips (if trip distance should not exceed 150 KM)
-          if (isRoundTrip && totalKm <= 150) {
-            fare = activeLorryRate.upDown ? totalKm * activeLorryRate.upDown : fare;
-          }
-
-          // Add hill surcharge (Rs. 10 per KM for hilly areas)
-          const hillSurcharge = selectedHillCountry ? totalKm * activeLorryRate.hillExtraPerKm : 0;
-          fare += hillSurcharge;
-
-          // For 1-day trips, return fare as-is. For multi-day, multiply by days
-          if (days === 1) {
-            return fare;
-          } else {
-            // For multi-day trips, multiply the base fare by days
-            return fare * days;
-          }
-        })()
-      : null;
+          const lorryHillExtraPerKm = activeLorryRate?.hillExtraPerKm ?? 0;
+          const lorryHillCharge = selectedHillCountry && totalKm ? totalKm * lorryHillExtraPerKm : 0;
+          const lorryBaseFare = lorryStartCharge + lorryExtraCharge + lorryHillCharge;
+          const lorryFare = totalKm && activeLorryRate
+            ? (lorryDays === 1 ? lorryBaseFare : lorryBaseFare * lorryDays)
+            : null;
     const fare = form.serviceType === "Lorry"
       ? lorryFare
       : Number(form.days) === 1
@@ -512,6 +519,12 @@ export function BookingForm() {
       destinationPin,
       distanceSource: distance?.source,
       lorryType: activeLorryType,
+      lorryStartCharge,
+      lorryExtraKm,
+      lorryExtraCharge,
+      lorryHillCharge,
+      lorryDropMaxKm,
+      lorryHillExtraPerKm,
     });
   }
 
@@ -894,18 +907,15 @@ Thank you!`;
                       {summary.distanceKm ? (
                         <>
                           <p><span className="font-semibold">Distance:</span> {summary.distanceKm} km</p>
-                          {summary.distanceKm > 130 ? (
-                            <>
-                              <p><span className="font-semibold">Base rate:</span> {summary.distanceKm} km @ {summary.effectivePricePerKm ? formatLkr(summary.effectivePricePerKm) : "N/A"}/km = {summary.effectivePricePerKm ? formatLkr(summary.distanceKm * summary.effectivePricePerKm) : "N/A"}</p>
-                            </>
-                          ) : (
-                            <>
-                              <p><span className="font-semibold">Start fee:</span> {summary.basePackageCharge ? formatLkr(summary.basePackageCharge) : "N/A"}</p>
-                              <p><span className="font-semibold">Extra km:</span> {summary.distanceKm > 10 ? summary.distanceKm - 10 : 0} km @ {summary.effectivePricePerKm ? formatLkr(summary.effectivePricePerKm) : "N/A"}/km = {summary.distanceKm > 10 ? formatLkr((summary.distanceKm - 10) * (summary.effectivePricePerKm || 0)) : "Rs. 0"}</p>
-                            </>
+                          <p><span className="font-semibold">Start fee:</span> {formatLkr(summary.lorryStartCharge ?? 0)}</p>
+                          {(summary.lorryExtraKm ?? 0) > 0 && (
+                            <p><span className="font-semibold">Extra km:</span> {summary.lorryExtraKm} km @ {formatLkr(summary.effectivePricePerKm)}/km = {formatLkr(summary.lorryExtraCharge ?? 0)}</p>
                           )}
-                          {summary.isHillCountry && <p><span className="font-semibold">Hill surcharge:</span> {summary.distanceKm} km × Rs. 10/km = {formatLkr(summary.distanceKm * 10)}</p>}
+                          {summary.isHillCountry && (summary.lorryHillCharge ?? 0) > 0 && (
+                            <p><span className="font-semibold">Hill surcharge:</span> {summary.distanceKm} km × {formatLkr(summary.lorryHillExtraPerKm ?? 0)}/km = {formatLkr(summary.lorryHillCharge ?? 0)}</p>
+                          )}
                           {Number(summary.days) > 1 && <p><span className="font-semibold">Days:</span> × {summary.days} days</p>}
+                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0) + (summary.lorryHillCharge ?? 0))}</p>
                         </>
                       ) : (
                         <p>Add pickup and destination to calculate the lorry fare.</p>
@@ -956,7 +966,6 @@ Thank you!`;
                         <div className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-white/60">
                           <p><span className="font-semibold">Distance:</span> {summary.distanceKm ? `${summary.distanceKm} km` : "Not calculated"}</p>
                           <p><span className="font-semibold">Distance-based rate:</span> {summary.distanceKm && summary.pricePerKm ? `${summary.distanceKm} km @ ${formatLkr(summary.pricePerKm)}/km = ${formatLkr(summary.distanceKm * summary.pricePerKm)}` : "Not calculated"}</p>
-                          {summary.includedKm > 0 && <p><span className="font-semibold">Included distance:</span> {summary.includedKm} km (no extra charge)</p>}
                         </div>
                         <p className="mt-2 text-xs leading-relaxed text-white/45">
                           Calculated based on total distance traveled. Includes the first {INCLUDED_KM_PER_DAY} km at the selected per-km rate.

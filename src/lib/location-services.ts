@@ -187,7 +187,8 @@ export function classifyHillCountry(
   ];
 
   const keywordHit = hillKeywords.some((keyword) => text.includes(keyword));
-  const latHint = point ? point.lat >= 6.5 && point.lat <= 8.8 && point.lng >= 79.5 && point.lng <= 81.8 : false;
+  // Central highlands bounding box only
+  const latHint = point ? point.lat >= 6.7 && point.lat <= 7.4 && point.lng >= 80.4 && point.lng <= 81.2 : false;
 
   return {
     isHillCountry: keywordHit || latHint,
