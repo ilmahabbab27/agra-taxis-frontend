@@ -189,6 +189,31 @@ export async function deleteVehicleFromDatabase(vehicle: VehicleCatalogItem) {
   if (!response.ok) throw new Error("Delete vehicle API request failed");
 }
 
+export async function saveLorryToDatabase(vehicle: VehicleFormInput, id?: number) {
+  const payload = {
+    name: vehicle.name,
+    category: vehicle.category || "Lorries",
+    img: vehicle.img,
+    img2: vehicle.img2,
+    img3: vehicle.img3,
+    img4: vehicle.img4,
+    img5: vehicle.img5,
+    rateTable: vehicle.lorryRates,
+  };
+
+  const response = await fetch(id ? `${API_BASE}/lorries/${id}` : `${API_BASE}/lorries`, {
+    method: id ? "PUT" : "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(await readApiError(response, "Save lorry API request failed"));
+  const result = await response.json() as { data: VehicleCatalogItem };
+  return normalizeApiVehicle(result.data) as VehicleCatalogItem;
+}
+
 export async function saveCategoryToDatabase(category: string) {
   const response = await fetch(`${API_BASE}/vehicle-categories`, {
     method: "POST",

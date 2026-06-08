@@ -22,6 +22,7 @@ export function Fleet() {
   const [categoryList, setCategoryList] = useState<Category[]>(() => getVehicleCategories());
   const [vehicleList, setVehicleList] = useState<VehicleCatalogItem[]>(() => getVehicles());
   const [selectedVehicle, setSelectedVehicle] = useState<VehicleCatalogItem | null>(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const filtered = active === "All" ? vehicleList : vehicleList.filter((f) => f.category === active);
 
@@ -51,6 +52,8 @@ export function Fleet() {
         if (cancelled) return;
         setVehicleList([...getVehicles(), ...[]]);
         setCategoryList(getVehicleCategories());
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
     void loadVehicles();
@@ -93,7 +96,36 @@ export function Fleet() {
         </div>
 
         <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((v, i) => (
+          {loading ? (
+            <>
+              {[...Array(6)].map((_, i) => (
+                <motion.div
+                  key={`skeleton-${i}`}
+                  initial={{ opacity: 0.6 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 1, repeat: Infinity, repeatType: "reverse" }}
+                  className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft"
+                >
+                  <div className="aspect-16/10 bg-secondary" />
+                  <div className="space-y-4 p-5">
+                    <div className="h-6 w-3/4 rounded bg-secondary" />
+                    <div className="flex flex-wrap gap-1.5">
+                      {[...Array(4)].map((_, j) => (
+                        <div key={j} className="h-6 w-16 rounded-full bg-secondary" />
+                      ))}
+                    </div>
+                    <div className="h-20 rounded-xl bg-secondary" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="h-10 rounded-xl bg-secondary" />
+                      <div className="h-10 rounded-xl bg-secondary" />
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </>
+          ) : (
+            <>
+              {filtered.map((v, i) => (
             <motion.div
               key={v.name}
               layout
@@ -209,14 +241,15 @@ export function Fleet() {
                 </div>
               </div>
             </motion.div>
-          ))}
+              ))}
+              {filtered.length === 0 && (
+                <div className="col-span-full mt-16 text-center text-sm text-muted-foreground">
+                  No vehicles in this category yet.
+                </div>
+              )}
+            </>
+          )}
         </div>
-
-        {filtered.length === 0 && (
-          <div className="mt-16 text-center text-sm text-muted-foreground">
-            No vehicles in this category yet.
-          </div>
-        )}
       </div>
 
       {selectedVehicle && (

@@ -17,6 +17,7 @@ import {
   saveCustomVehicle,
   saveCategoryToDatabase,
   saveVehicleToDatabase,
+  saveLorryToDatabase,
   type DayPrices,
   type LorryRateRow,
   type LorryRates,
@@ -264,6 +265,7 @@ function AdminDashboard() {
   const [imageUploading, setImageUploading] = useState<"img" | "img2" | null>(null);
   const [lorryImageUploading, setLorryImageUploading] = useState<ImageSlot | null>(null);
   const [vehicleSaveError, setVehicleSaveError] = useState("");
+  const [currentLorry, setCurrentLorry] = useState<VehicleCatalogItem | null>(null);
 
   useEffect(() => {
     if (!isAdminAuthed()) {
@@ -286,6 +288,7 @@ function AdminDashboard() {
       const lorryWithRates = lorries.find((vehicle) => vehicle.lorryRates && Object.keys(vehicle.lorryRates).length);
       const firstLorry = lorryWithRates ?? lorries[0];
       setAdminVehicles(Array.from(byName.values()));
+      setCurrentLorry(firstLorry ?? null);
       setLorryRates(lorryWithRates?.lorryRates ?? emptyLorryRates);
       if (firstLorry) {
         setLorryImageForm({
@@ -413,23 +416,22 @@ function AdminDashboard() {
 
   async function saveLorryRates() {
     setLorrySaveStatus("Saving...");
-    const existingLorry = adminVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
     const lorryVehicle: VehicleFormInput = {
-      ...(existingLorry ?? emptyVehicleForm),
-      name: existingLorry?.name || "Lorry Rates",
-      category: existingLorry?.category || "Lorries",
-      img: lorryImageForm.img || existingLorry?.img || "/assets/car.jpg",
+      ...(currentLorry ?? emptyVehicleForm),
+      name: currentLorry?.name || "Agra Lorry",
+      category: currentLorry?.category || "Lorries",
+      img: lorryImageForm.img || currentLorry?.img || "/assets/car.jpg",
       img2: lorryImageForm.img2,
       img3: lorryImageForm.img3,
       img4: lorryImageForm.img4,
       img5: lorryImageForm.img5,
-      seats: existingLorry?.seats || 2,
-      acAvailable: existingLorry?.acAvailable ?? true,
-      nonAcAvailable: existingLorry?.nonAcAvailable ?? true,
+      seats: currentLorry?.seats || 2,
+      acAvailable: currentLorry?.acAvailable ?? true,
+      nonAcAvailable: currentLorry?.nonAcAvailable ?? true,
       lorryRates,
     };
     try {
-      await saveVehicleToDatabase(lorryVehicle, existingLorry?.id);
+      await saveLorryToDatabase(lorryVehicle, currentLorry?.id);
       await refreshVehicles();
       setLorrySaveStatus("Saved");
       setIsLorryEditing(false);

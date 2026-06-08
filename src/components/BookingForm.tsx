@@ -414,31 +414,59 @@ export function BookingForm() {
     const totalKm = distance?.km ?? null;
     const includedKm = Number(form.days || 1) * INCLUDED_KM_PER_DAY;
     const additionalKm = totalKm && totalKm > includedKm ? Number((totalKm - includedKm).toFixed(1)) : 0;
-    const billableKm = totalKm ? Math.min(totalKm, includedKm) : 0;
-    const includedDistanceCharge = Number(form.days) === 1
-      ? oneDayPackageDistanceCharge || (billableKm && selectedPricePerKm ? billableKm * selectedPricePerKm : 0)
-      : basePackageCharge || (billableKm && selectedPricePerKm ? billableKm * selectedPricePerKm : 0);
-    const additionalDistanceCharge = additionalKm && selectedPricePerKm ? additionalKm * selectedPricePerKm : 0;
-    const package1BaseCharge = selectedPricePerKm
-      ? selectedPricePerKm * INCLUDED_KM_PER_DAY
-      : basePackageCharge || oneDayPackageDistanceCharge || 0;
-    const package1Estimate = totalKm
-      ? package1BaseCharge + additionalDistanceCharge
-      : null;
-    const package2Estimate = totalKm && selectedPricePerKm
-      ? totalKm * selectedPricePerKm
-      : null;
-    const activeLorryRate = resolvedLorryRate;
-    const activeLorryType = activeLorryRate?.type || "7 FT";
-    const lorryFare = totalKm && activeLorryRate
-      ? (() => {
-          const base = totalKm <= activeLorryRate.dropMaxKm
-            ? activeLorryRate.start
-            : activeLorryRate.between100And130;
-          const extraKm = Math.max(totalKm - activeLorryRate.dropMinKm, 0);
-          const surcharge = extraKm * activeLorryRate.extra;
+        const billableKm = totalKm ? Math.min(totalKm, includedKm) : 0;
+            const includedDistanceCharge = Number(form.days) === 1
+                  ? oneDayPackageDistanceCharge || (billableKm && selectedPricePerKm ? billableKm * selectedPricePerKm : 0)
+                        : basePackageCharge || (billableKm && selectedPricePerKm ? billableKm * selectedPricePerKm : 0);
+                            const additionalDistanceCharge = additionalKm && selectedPricePerKm ? additionalKm * selectedPricePerKm : 0;
+                                const package1DayCharge = selectedPricePerKm
+                                      ? selectedPricePerKm * INCLUDED_KM_PER_DAY
+                                            : oneDayPackageDistanceCharge || 0;
+                                                const package1BaseCharge = package1DayCharge * Number(form.days || 1);
+                                                    const package1Estimate = totalKm
+                                                          ? package1BaseCharge + additionalDistanceCharge
+                                                                : null;
+                                                                    const package2Estimate = totalKm && selectedPricePerKm
+                                                                          ? totalKm * selectedPricePerKm
+                                                                                : null;
+                                                                                    const activeLorryRate = resolvedLorryRate;
+                                                                                        const activeLorryType = activeLorryRate?.type || "7 FT";
+                                                                                            const lorryFare = totalKm && activeLorryRate
+                                                                                                  ? (() => {
+                                                                                                            let fare = 0;
+          const isRoundTrip = form.trip === 'round-trip';
+          const days = Number(form.days || 1);
+
+          // Determine base rate based on distance
+          if (totalKm >= 100 && totalKm <= 130) {
+            // Use the "Between 100-130 KM" fixed rate
+            fare = activeLorryRate.between100And130;
+          } else if (totalKm > 130) {
+            // For trips over 130 KM, use per-km rate without standard start fee
+            fare = totalKm * activeLorryRate.extra;
+          } else {
+            // Standard calculation: Start fee + extra KM charges
+            fare = activeLorryRate.start;
+            const extraKm = Math.max(totalKm - activeLorryRate.dropMinKm, 0);
+            fare += extraKm * activeLorryRate.extra;
+          }
+
+          // Apply Up & Down rate for round trips (if trip distance should not exceed 150 KM)
+          if (isRoundTrip && totalKm <= 150) {
+            fare = activeLorryRate.upDown ? totalKm * activeLorryRate.upDown : fare;
+          }
+
+          // Add hill surcharge (Rs. 10 per KM for hilly areas)
           const hillSurcharge = selectedHillCountry ? totalKm * activeLorryRate.hillExtraPerKm : 0;
-          return base + surcharge + hillSurcharge;
+          fare += hillSurcharge;
+
+          // For 1-day trips, return fare as-is. For multi-day, multiply by days
+          if (days === 1) {
+            return fare;
+          } else {
+            // For multi-day trips, multiply the base fare by days
+            return fare * days;
+          }
         })()
       : null;
     const fare = form.serviceType === "Lorry"
@@ -862,19 +890,29 @@ Thank you!`;
                     <p className="mt-1 text-lg font-bold text-gold">
                       {summary.estimatedFare ? formatLkr(summary.estimatedFare) : "Not available"}
                     </p>
-                    <p className="mt-2 text-xs leading-relaxed text-white/45">
+                    <div className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-white/60">
                       {summary.distanceKm ? (
                         <>
-                          Calculated as {summary.basePackageCharge ? formatLkr(summary.basePackageCharge) : "the base fare"} +{" "}
-                          {summary.distanceKm} km x {summary.effectivePricePerKm ? formatLkr(summary.effectivePricePerKm) : "the extra per-km rate"}
-                          {summary.isHillCountry ? " + hill surcharge" : ""}.
+                          <p><span className="font-semibold">Distance:</span> {summary.distanceKm} km</p>
+                          {summary.distanceKm > 130 ? (
+                            <>
+                              <p><span className="font-semibold">Base rate:</span> {summary.distanceKm} km @ {summary.effectivePricePerKm ? formatLkr(summary.effectivePricePerKm) : "N/A"}/km = {summary.effectivePricePerKm ? formatLkr(summary.distanceKm * summary.effectivePricePerKm) : "N/A"}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p><span className="font-semibold">Start fee:</span> {summary.basePackageCharge ? formatLkr(summary.basePackageCharge) : "N/A"}</p>
+                              <p><span className="font-semibold">Extra km:</span> {summary.distanceKm > 10 ? summary.distanceKm - 10 : 0} km @ {summary.effectivePricePerKm ? formatLkr(summary.effectivePricePerKm) : "N/A"}/km = {summary.distanceKm > 10 ? formatLkr((summary.distanceKm - 10) * (summary.effectivePricePerKm || 0)) : "Rs. 0"}</p>
+                            </>
+                          )}
+                          {summary.isHillCountry && <p><span className="font-semibold">Hill surcharge:</span> {summary.distanceKm} km × Rs. 10/km = {formatLkr(summary.distanceKm * 10)}</p>}
+                          {Number(summary.days) > 1 && <p><span className="font-semibold">Days:</span> × {summary.days} days</p>}
                         </>
                       ) : (
-                        "Add pickup and destination to calculate the lorry fare."
+                        <p>Add pickup and destination to calculate the lorry fare.</p>
                       )}
-                    </p>
+                    </div>
                     <p className="mt-2 text-xs leading-relaxed text-amber-300">
-                      Extra charges may apply if the trip goes beyond the included distance.
+                      Final pricing may vary based on actual route, waiting time, and road conditions.
                     </p>
                   </div>
                 </div>
@@ -891,15 +929,23 @@ Thank you!`;
                   </p>
 
                   <div className="space-y-3">
-                    <div className="border border-white/10 bg-white/5 px-4 py-3">
-                      <p className="text-sm font-semibold text-white">Package 1 - day package</p>
-                      <p className="mt-1 text-lg font-bold text-gold">
-                        {summary.package1Estimate != null ? formatLkr(summary.package1Estimate) : "Not available"}
-                      </p>
-                      <p className="mt-1 text-xs leading-relaxed text-white/45">
-                        Package 1 includes {INCLUDED_KM_PER_DAY} km per day and is calculated from the selected per-km rate. If the trip exceeds that limit, extra distance is charged per km.
-                      </p>
-                    </div>
+                    {summary.distanceKm && summary.distanceKm <= (Number(summary.days) * INCLUDED_KM_PER_DAY) && (
+                      <div className="border border-white/10 bg-white/5 px-4 py-3">
+                        <p className="text-sm font-semibold text-white">Package 1 - day package</p>
+                        <p className="mt-1 text-lg font-bold text-gold">
+                          {summary.package1Estimate != null ? formatLkr(summary.package1Estimate) : "Not available"}
+                        </p>
+                        <div className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-white/60">
+                          <p><span className="font-semibold">Distance:</span> {summary.distanceKm ? `${summary.distanceKm} km` : "Not calculated"}</p>
+                          <p><span className="font-semibold">Daily package:</span> {INCLUDED_KM_PER_DAY} km @ {summary.pricePerKm ? formatLkr(summary.pricePerKm) : "N/A"}/km = {summary.pricePerKm ? formatLkr(INCLUDED_KM_PER_DAY * summary.pricePerKm) : "N/A"}</p>
+                          {summary.days && Number(summary.days) > 1 && <p><span className="font-semibold">Days:</span> × {summary.days} days = {summary.pricePerKm ? formatLkr(INCLUDED_KM_PER_DAY * summary.pricePerKm * Number(summary.days)) : "N/A"}</p>}
+                          {summary.additionalKm > 0 && <p><span className="font-semibold">Extra km:</span> {summary.additionalKm} km @ {summary.pricePerKm ? formatLkr(summary.pricePerKm) : "N/A"}/km = {summary.pricePerKm ? formatLkr(summary.additionalKm * summary.pricePerKm) : "N/A"}</p>}
+                        </div>
+                        <p className="mt-2 text-xs leading-relaxed text-white/45">
+                          Package 1 includes {INCLUDED_KM_PER_DAY} km per day. If the trip exceeds this, extra distance is charged per km.
+                        </p>
+                      </div>
+                    )}
 
                     {Number(summary.days) === 1 && (
                       <div className="border border-white/10 bg-white/5 px-4 py-3">
@@ -907,14 +953,13 @@ Thank you!`;
                         <p className="mt-1 text-lg font-bold text-gold">
                           {summary.package2Estimate != null ? formatLkr(summary.package2Estimate) : "Not available"}
                         </p>
-                        <p className="mt-1 text-xs leading-relaxed text-white/45">
-                          Travel distance: {summary.distanceKm ? `${summary.distanceKm} km` : "Not calculated"}
-                        </p>
-                        <p className="mt-1 text-xs leading-relaxed text-white/45">
-                          Calculated as pickup-to-drop distance x {summary.pricePerKm ? formatLkr(summary.pricePerKm) : "the selected per km rate"}. Extra distance beyond the included allowance is charged per km.
-                        </p>
-                        <p className="mt-1 text-xs leading-relaxed text-amber-300">
-                          Package 2 shows only the pickup and drop distance here. Extra distance may increase the final fare if the route goes over the included allowance.
+                        <div className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-white/60">
+                          <p><span className="font-semibold">Distance:</span> {summary.distanceKm ? `${summary.distanceKm} km` : "Not calculated"}</p>
+                          <p><span className="font-semibold">Distance-based rate:</span> {summary.distanceKm && summary.pricePerKm ? `${summary.distanceKm} km @ ${formatLkr(summary.pricePerKm)}/km = ${formatLkr(summary.distanceKm * summary.pricePerKm)}` : "Not calculated"}</p>
+                          {summary.includedKm > 0 && <p><span className="font-semibold">Included distance:</span> {summary.includedKm} km (no extra charge)</p>}
+                        </div>
+                        <p className="mt-2 text-xs leading-relaxed text-white/45">
+                          Calculated based on total distance traveled. Includes the first {INCLUDED_KM_PER_DAY} km at the selected per-km rate.
                         </p>
                       </div>
                     )}
