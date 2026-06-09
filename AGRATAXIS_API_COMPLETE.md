@@ -477,27 +477,70 @@ curl -X POST "https://agrataxis.com/backend/api/bot/calculate" \
   }'
 ```
 
-## Response (Success - Passenger)
+## Response (Success - Passenger with Package Pricing)
 ```json
 {
   "success": true,
-  "serviceType": "Passenger",
-  "estimatedFare": 20700,
-  "distance": 115,
-  "isHillCountry": true,
-  "breakdown": {
-    "baseFare": 18000,
-    "hillSurcharge": 2700,
-    "total": 20700
-  },
-  "pricePerKm": 180,
-  "vehicle": "Toyota Hiace",
-  "passengers": 5,
-  "acOption": "AC",
-  "days": 1,
-  "tripType": "One Way"
+  "data": {
+    "package1": {
+      "type": "package1",
+      "name": "Day Package",
+      "baseCharge": 15000,
+      "includedKm": 150,
+      "additionalKm": 0,
+      "additionalCharges": 0,
+      "total": 15000,
+      "breakdown": {
+        "basePackageCharge": 15000,
+        "includedKmPerDay": 150,
+        "includedKmTotal": 150,
+        "additionalKm": 0,
+        "pricePerAdditionalKm": 180,
+        "additionalCharges": 0,
+        "total": 15000
+      }
+    },
+    "package2": {
+      "type": "package2",
+      "name": "Per KM",
+      "pricePerKm": 180,
+      "totalKm": 115,
+      "total": 20700,
+      "breakdown": {
+        "distance": 115,
+        "pricePerKm": 180,
+        "isHillCountry": true,
+        "total": 20700
+      }
+    },
+    "recommended": "package1",
+    "selectedPackage": 15000,
+    "pricePerKm": 180,
+    "effectiveDistance": 115,
+    "days": 1,
+    "tripType": "One Way",
+    "vehicle": "Toyota Hiace",
+    "passengers": 5,
+    "acOption": "AC",
+    "isHillCountry": true
+  }
 }
 ```
+
+**Two Pricing Options Explained:**
+
+**Package 1: Day Package** (RECOMMENDED for short trips)
+- Fixed charge per day: Rs. 15,000
+- Includes 150 km per day
+- Additional km charged at: Rs. 180/km
+- Best for: Distance ≤ 150 km per day
+- Save Rs. 5,700 vs Package 2 on this trip!
+
+**Package 2: Per-KM Pricing**
+- Simple distance-based pricing
+- Cost = Distance × Price Per KM
+- No included km, all charged
+- Best for: Very short trips (< 83 km)
 
 ## Response (Success - Lorry)
 ```json
@@ -1310,6 +1353,109 @@ estimate = api.calculate_fare({
 })
 print(f"Fare: Rs. {estimate['estimatedFare']}")
 ```
+
+---
+
+# 📦 Package Pricing System
+
+## Two Pricing Models
+
+### Package 1: Day Package (Recommended)
+- **Base Charge:** Per day (from vehicle.package1Prices)
+- **Includes:** 150 km per day
+- **Additional km:** Charged at Price Per KM rate
+- **Best for:** 1-3 day trips, medium distances
+
+**Calculation:**
+```
+Total = Base Charge + (Additional KM × Price Per KM)
+Where Additional KM = max(0, Total Distance - 150 km per day)
+```
+
+### Package 2: Per-KM Pricing
+- **Simple formula:** Distance × Price Per KM
+- **No included km:** All distance charged
+- **Best for:** Very short trips (< 83 km)
+
+**Calculation:**
+```
+Total = Distance × Price Per KM
+For Round Trip: Total = (Distance × 2) × Price Per KM
+```
+
+## Pricing Examples
+
+### 1-Day Trip, 115 km, AC, Hill Country
+
+**Package 1 (Day Package):**
+```
+Base Charge (day1, AC, Hill): Rs. 18,000
+Included: 150 km
+Your distance: 115 km
+Additional km: 0
+Additional charge: Rs. 0
+━━━━━━━━━━━━━━━━━━━━
+TOTAL: Rs. 18,000 ✅
+```
+
+**Package 2 (Per-KM):**
+```
+Distance: 115 km
+Price/km (Hill): Rs. 220
+━━━━━━━━━━━━━━━━━━━━
+TOTAL: 115 × 220 = Rs. 25,300
+```
+
+**SAVE Rs. 7,300 with Package 1!**
+
+---
+
+### 2-Day Trip, 115 km, AC, Hill Country
+
+**Package 1 (Day Package):**
+```
+Base Charge (day2, AC, Hill): Rs. 33,600
+Includes: 300 km (150 × 2)
+Your distance: 115 km
+Additional km: 0
+━━━━━━━━━━━━━━━━━━━━
+TOTAL: Rs. 33,600 ✅
+```
+
+**Package 2 (Per-KM):**
+```
+Distance: 115 km × 2 days = 230 km
+Price/km: Rs. 220
+━━━━━━━━━━━━━━━━━━━━
+TOTAL: 230 × 220 = Rs. 50,600
+```
+
+**SAVE Rs. 17,000 with Package 1!**
+
+---
+
+### Round Trip, 115 km, AC, Hill Country
+
+**Package 1 (Day Package):**
+```
+Base Charge (day1, AC, Hill): Rs. 18,000
+Includes: 150 km
+Round trip distance: 230 km (115 × 2)
+Additional km: 80 km
+Additional charge: 80 × 220 = Rs. 17,600
+━━━━━━━━━━━━━━━━━━━━
+TOTAL: Rs. 35,600 ✅
+```
+
+**Package 2 (Per-KM):**
+```
+Distance: 230 km (115 × 2)
+Price/km: Rs. 220
+━━━━━━━━━━━━━━━━━━━━
+TOTAL: 230 × 220 = Rs. 50,600
+```
+
+**SAVE Rs. 15,000 with Package 1!**
 
 ---
 
