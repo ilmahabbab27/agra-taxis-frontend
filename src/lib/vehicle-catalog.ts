@@ -174,6 +174,7 @@ export async function saveVehicleToDatabase(vehicle: VehicleFormInput, id?: numb
   });
   if (!response.ok) throw new Error(await readApiError(response, "Save vehicle API request failed"));
   const payload = await response.json() as { data: VehicleCatalogItem };
+  clearVehicleCache();
   return normalizeApiVehicle(payload.data) as VehicleCatalogItem;
 }
 
@@ -211,6 +212,7 @@ export async function saveLorryToDatabase(vehicle: VehicleFormInput, id?: number
   });
   if (!response.ok) throw new Error(await readApiError(response, "Save lorry API request failed"));
   const result = await response.json() as { data: VehicleCatalogItem };
+  clearVehicleCache();
   return normalizeApiVehicle(result.data) as VehicleCatalogItem;
 }
 
@@ -346,20 +348,6 @@ function setDeletedVehicleNames(names: string[]) {
   localStorage.setItem(DELETED_VEHICLES_KEY, JSON.stringify(uniqueNames));
 }
 
-function normalizeStayPrices(raw: unknown): StayPrices {
-  const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  return {
-    day1: Math.max(0, Number(s.day1) || 0),
-    day2: Math.max(0, Number(s.day2) || 0),
-    day3: Math.max(0, Number(s.day3) || 0),
-    day4: Math.max(0, Number(s.day4) || 0),
-    day5: Math.max(0, Number(s.day5) || 0),
-  };
-}
-
-function emptyDayPrices(): DayPrices {
-  return { acNormal: 0, acHill: 0, nonAcNormal: 0, nonAcHill: 0 };
-}
 
 function normalizePackagePrices(raw: unknown): PackagePrices {
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
@@ -502,6 +490,12 @@ function normalizeLorryRates(raw: unknown): LorryRates {
   }, {});
 }
 
+export function clearVehicleCache() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(VEHICLE_CACHE_KEY);
+  localStorage.removeItem(LORRY_CACHE_KEY);
+}
+
 function getCache<T>(key: string): T | null {
   if (typeof window === "undefined") return null;
   try {
@@ -522,7 +516,7 @@ function setCache<T>(key: string, value: T) {
       key,
       JSON.stringify({
         value,
-        expiresAt: Date.now() + 5 * 60 * 1000,
+        expiresAt: Date.now() + 24 * 60 * 60 * 1000,
       }),
     );
   } catch {

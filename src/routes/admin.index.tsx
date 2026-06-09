@@ -265,6 +265,7 @@ function AdminDashboard() {
   const [imageUploading, setImageUploading] = useState<"img" | "img2" | null>(null);
   const [lorryImageUploading, setLorryImageUploading] = useState<ImageSlot | null>(null);
   const [vehicleSaveError, setVehicleSaveError] = useState("");
+  const [vehicleSaving, setVehicleSaving] = useState(false);
   const [currentLorry, setCurrentLorry] = useState<VehicleCatalogItem | null>(null);
 
   useEffect(() => {
@@ -500,11 +501,14 @@ function AdminDashboard() {
     event.preventDefault();
     if (!vehicleForm.name.trim()) return;
     const editingVehicle = adminVehicles.find((vehicle) => vehicle.name === editingVehicleName);
+    setVehicleSaving(true);
     try {
       await saveVehicleToDatabase(vehicleForm, editingVehicle?.id);
     } catch (error) {
       setVehicleSaveError(error instanceof Error ? error.message : "Could not save vehicle.");
       return;
+    } finally {
+      setVehicleSaving(false);
     }
     await refreshVehicles();
     closeVehicleDialog();
@@ -814,7 +818,7 @@ function AdminDashboard() {
                     </div>
                     <div className="mt-2 rounded-lg border border-border bg-[#f8f9fb] px-2.5 py-2">
                       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Packages</p>
-                      <p className="text-[10px] text-charcoal">Package 1: up to 100 km/day</p>
+                      <p className="text-[10px] text-charcoal">Package 1: up to 150 km/day</p>
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <button
@@ -1163,7 +1167,7 @@ function AdminDashboard() {
 
               <PackagePriceTable
                 title="Package 1"
-                kmLimit={100}
+                kmLimit={150}
                 prices={vehicleForm.package1Prices ?? emptyPackagePrices}
                 acAvailable={vehicleForm.acAvailable}
                 nonAcAvailable={vehicleForm.nonAcAvailable}
@@ -1186,10 +1190,16 @@ function AdminDashboard() {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90"
+                  disabled={vehicleSaving}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                 >
-                  {editingVehicleName ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  {editingVehicleName ? "Update Vehicle" : "Add Vehicle"}
+                  {vehicleSaving ? (
+                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                    </svg>
+                  ) : editingVehicleName ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  {vehicleSaving ? "Saving…" : editingVehicleName ? "Update Vehicle" : "Add Vehicle"}
                 </button>
               </DialogFooter>
             </form>

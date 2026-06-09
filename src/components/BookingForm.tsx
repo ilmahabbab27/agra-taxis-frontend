@@ -216,6 +216,7 @@ export function BookingForm() {
   const [selectedLorryKey, setSelectedLorryKey] = useState<string>("");
   const [lorryCatalog, setLorryCatalog] = useState<VehicleCatalogItem[]>([]);
   const lorrySelectionInitialized = useRef(false);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
 
   const paxCount = Number(form.pax) || 0;
   const passengerVehicles = useMemo(
@@ -310,12 +311,16 @@ export function BookingForm() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Show cached data instantly while fresh data loads in background
     const cachedVehicles = getCachedVehiclesFromDatabase();
     const cachedLorries = getCachedLorriesFromDatabase();
     if (cachedVehicles?.length || cachedLorries?.length) {
-      setVehicleList([...(cachedVehicles ?? []), ...(cachedLorries ?? [])]);
+      const combined = [...(cachedVehicles ?? []), ...(cachedLorries ?? [])];
+      setVehicleList(combined);
       if (cachedLorries?.length) setLorryCatalog(cachedLorries);
     }
+
     async function loadVehicles() {
       let nextVehicles = getVehicles();
       let nextCategories = getVehicleCategories();
@@ -332,6 +337,7 @@ export function BookingForm() {
         // Local fallback keeps the inquiry form usable if the backend is offline.
       }
       if (cancelled) return;
+      setVehiclesLoading(false);
       setCategoryList(nextCategories);
       setVehicleList(nextVehicles);
       setLorryCatalog(nextVehicles.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry")));
@@ -645,26 +651,40 @@ Thank you!`;
               <AnimatePresence mode="wait">
                 {step === 0 && (
                   <motion.div key="step-0" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} className="grid gap-5 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => update("serviceType", "Passenger")}
-                      className={`border px-4 py-4 text-left transition ${
-                        form.serviceType === "Passenger" ? "border-gold bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70"
-                      }`}
-                    >
-                      <p className="text-sm font-semibold">Passenger vehicle</p>
-                      <p className="mt-1 text-xs text-white/45">Cars, vans, SUVs, minibuses, and buses.</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => update("serviceType", "Lorry")}
-                      className={`border px-4 py-4 text-left transition ${
-                        form.serviceType === "Lorry" ? "border-gold bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70"
-                      }`}
-                    >
-                      <p className="text-sm font-semibold">Lorry</p>
-                      <p className="mt-1 text-xs text-white/45">Use the separate lorry rate table and rules.</p>
-                    </button>
+                    {vehiclesLoading && (
+                      <div className="col-span-full rounded-lg border border-gold/20 bg-gold/5 px-6 py-8 text-center">
+                        <svg className="mx-auto mb-4 h-8 w-8 animate-spin text-gold" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                        </svg>
+                        <p className="text-sm font-semibold text-white">Loading available vehicles for you</p>
+                        <p className="mt-2 text-xs text-white/60">Please wait while we fetch the latest vehicle options...</p>
+                      </div>
+                    )}
+                    {!vehiclesLoading && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => update("serviceType", "Passenger")}
+                          className={`border px-4 py-4 text-left transition ${
+                            form.serviceType === "Passenger" ? "border-gold bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold">Passenger vehicle</p>
+                          <p className="mt-1 text-xs text-white/45">Cars, vans, SUVs, minibuses, and buses.</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => update("serviceType", "Lorry")}
+                          className={`border px-4 py-4 text-left transition ${
+                            form.serviceType === "Lorry" ? "border-gold bg-white/10 text-white" : "border-white/10 bg-white/5 text-white/70"
+                          }`}
+                        >
+                          <p className="text-sm font-semibold">Lorry</p>
+                          <p className="mt-1 text-xs text-white/45">Use the separate lorry rate table and rules.</p>
+                        </button>
+                      </>
+                    )}
                   </motion.div>
                 )}
 

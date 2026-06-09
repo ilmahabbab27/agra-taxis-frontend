@@ -346,10 +346,10 @@ function DetailTile({ label, value }: { label: string; value: string }) {
 function RateTable({ vehicle }: { vehicle: VehicleCatalogItem }) {
   const rates = vehicle.perKmPrices;
   const rows = [
-    ["AC", "One way", rates?.ac.oneWay.normal ?? vehicle.acPricePerKm, rates?.ac.oneWay.hill ?? vehicle.acHillPricePerKm, vehicle.acAvailable],
-    ["AC", "Round trip", rates?.ac.roundTrip.normal ?? vehicle.acPricePerKm, rates?.ac.roundTrip.hill ?? vehicle.acHillPricePerKm, vehicle.acAvailable],
-    ["Non-AC", "One way", rates?.nonAc.oneWay.normal ?? vehicle.nonAcPricePerKm, rates?.nonAc.oneWay.hill ?? vehicle.nonAcHillPricePerKm, vehicle.nonAcAvailable],
-    ["Non-AC", "Round trip", rates?.nonAc.roundTrip.normal ?? vehicle.nonAcPricePerKm, rates?.nonAc.roundTrip.hill ?? vehicle.nonAcHillPricePerKm, vehicle.nonAcAvailable],
+    ["AC", "One way", rates?.ac.oneWay.normal || vehicle.acPricePerKm, rates?.ac.oneWay.hill || vehicle.acHillPricePerKm, vehicle.acAvailable],
+    ["AC", "Round trip", rates?.ac.roundTrip.normal || vehicle.acPricePerKm, rates?.ac.roundTrip.hill || vehicle.acHillPricePerKm, vehicle.acAvailable],
+    ["Non-AC", "One way", rates?.nonAc.oneWay.normal || vehicle.nonAcPricePerKm, rates?.nonAc.oneWay.hill || vehicle.nonAcHillPricePerKm, vehicle.nonAcAvailable],
+    ["Non-AC", "Round trip", rates?.nonAc.roundTrip.normal || vehicle.nonAcPricePerKm, rates?.nonAc.roundTrip.hill || vehicle.nonAcHillPricePerKm, vehicle.nonAcAvailable],
   ] as const;
   const visibleRows = rows.filter(([, , normal, hill, available]) => available && (normal > 0 || hill > 0));
 
