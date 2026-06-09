@@ -2,7 +2,7 @@
 
 Complete API documentation for agrataxis.com booking system.
 
-**Base URL:** `https://api.agrataxis.com` or `https://agrataxis.com/api`
+**Base URL:** `https://agrataxis.com/backend/api`
 
 ---
 
@@ -21,7 +21,7 @@ Complete API documentation for agrataxis.com booking system.
 
 ## 1. GET Vehicles
 
-**Endpoint:** `https://agrataxis.com/api/vehicles`
+**Endpoint:** `https://agrataxis.com/backend/api/vehicles`
 
 **Method:** GET
 
@@ -32,7 +32,7 @@ Complete API documentation for agrataxis.com booking system.
 
 **Example Request:**
 ```bash
-curl -X GET "https://agrataxis.com/api/vehicles?passengers=5" \
+curl -X GET "https://agrataxis.com/backend/api/vehicles?passengers=5" \
   -H "Content-Type: application/json"
 ```
 
@@ -90,7 +90,7 @@ curl -X GET "https://agrataxis.com/api/vehicles?passengers=5" \
 
 ## 2. POST Location Autocomplete
 
-**Endpoint:** `https://agrataxis.com/api/locations/suggest`
+**Endpoint:** `https://agrataxis.com/backend/api/locations/suggest`
 
 **Method:** POST
 
@@ -109,7 +109,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST "https://agrataxis.com/api/locations/suggest" \
+curl -X POST "https://agrataxis.com/backend/api/locations/suggest" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "kan",
@@ -149,7 +149,7 @@ curl -X POST "https://agrataxis.com/api/locations/suggest" \
 
 ## 3. POST Validate Location
 
-**Endpoint:** `https://agrataxis.com/api/bot/location`
+**Endpoint:** `https://agrataxis.com/backend/api/bot/location`
 
 **Method:** POST
 
@@ -172,7 +172,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST "https://agrataxis.com/api/bot/location" \
+curl -X POST "https://agrataxis.com/backend/api/bot/location" \
   -H "Content-Type: application/json" \
   -d '{
     "location": "colombo",
@@ -227,7 +227,7 @@ curl -X POST "https://agrataxis.com/api/bot/location" \
 
 ## 4. POST Calculate Distance
 
-**Endpoint:** `https://agrataxis.com/api/locations/distance`
+**Endpoint:** `https://agrataxis.com/backend/api/locations/distance`
 
 **Method:** POST
 
@@ -246,7 +246,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST "https://agrataxis.com/api/locations/distance" \
+curl -X POST "https://agrataxis.com/backend/api/locations/distance" \
   -H "Content-Type: application/json" \
   -d '{
     "from": "Colombo",
@@ -281,7 +281,7 @@ curl -X POST "https://agrataxis.com/api/locations/distance" \
 
 ## 5. POST Calculate Fare Estimate
 
-**Endpoint:** `https://agrataxis.com/api/bot/calculate`
+**Endpoint:** `https://agrataxis.com/backend/api/bot/calculate`
 
 **Method:** POST
 
@@ -309,7 +309,7 @@ Content-Type: application/json
 
 **Example Request:**
 ```bash
-curl -X POST "https://agrataxis.com/api/bot/calculate" \
+curl -X POST "https://agrataxis.com/backend/api/bot/calculate" \
   -H "Content-Type: application/json" \
   -d '{
     "serviceType": "Passenger",
@@ -393,25 +393,25 @@ curl -X POST "https://agrataxis.com/api/bot/calculate" \
 
 ```javascript
 // Call 1: Validate pickup
-const pickup = await fetch('https://agrataxis.com/api/bot/location', {
+const pickup = await fetch('https://agrataxis.com/backend/api/bot/location', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ location: 'Colombo' })
 }).then(r => r.json());
 
 // Call 2: Validate destination
-const destination = await fetch('https://agrataxis.com/api/bot/location', {
+const destination = await fetch('https://agrataxis.com/backend/api/bot/location', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ location: 'Kandy' })
 }).then(r => r.json());
 
 // Call 3: Get vehicles
-const vehicles = await fetch('https://agrataxis.com/api/vehicles?passengers=5')
+const vehicles = await fetch('https://agrataxis.com/backend/api/vehicles?passengers=5')
   .then(r => r.json());
 
 // Call 4: Calculate fare
-const estimate = await fetch('https://agrataxis.com/api/bot/calculate', {
+const estimate = await fetch('https://agrataxis.com/backend/api/bot/calculate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -443,11 +443,11 @@ const stop1 = await validateLocation('Negombo');
 const stop2 = await validateLocation('Kurunegala');
 
 // Get vehicles
-const vehicles = await fetch('https://agrataxis.com/api/vehicles?passengers=5')
+const vehicles = await fetch('https://agrataxis.com/backend/api/vehicles?passengers=5')
   .then(r => r.json());
 
 // Calculate with stops
-const estimate = await fetch('https://agrataxis.com/api/bot/calculate', {
+const estimate = await fetch('https://agrataxis.com/backend/api/bot/calculate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -573,7 +573,7 @@ Calculation based on:
 
 ```javascript
 class AgraTaxisClient {
-  constructor(baseUrl = 'https://agrataxis.com/api') {
+  constructor(baseUrl = 'https://agrataxis.com/backend/api') {
     this.baseUrl = baseUrl;
   }
 
@@ -622,7 +622,7 @@ const estimate = await client.calculateFare({
 import requests
 
 class AgraTaxisAPI:
-    def __init__(self, base_url='https://agrataxis.com/api'):
+    def __init__(self, base_url='https://agrataxis.com/backend/api'):
         self.base_url = base_url
 
     def validate_location(self, location):
@@ -666,7 +666,7 @@ print(f"Fare: Rs. {estimate['estimatedFare']}")
 
 **Company:** Agra Taxis
 - **Website:** https://agrataxis.com
-- **API Base:** https://agrataxis.com/api
+- **API Base:** https://agrataxis.com/backend/api
 - **Phone:** +94 72 3003 000
 - **WhatsApp:** https://wa.me/94723003000
 - **Email:** info@agrataxis.com

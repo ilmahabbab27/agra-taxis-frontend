@@ -472,7 +472,7 @@ Please provide valid locations:
 ```javascript
 async function makeAPIRequest(endpoint, data) {
   try {
-    const response = await fetch(`http://localhost:8000${endpoint}`, {
+    const response = await fetch(`https://agrataxis.com/backend${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -513,7 +513,7 @@ async function validateLocation(location) {
 import requests
 import json
 
-API_BASE = "http://localhost:8000"
+API_BASE = "https://agrataxis.com/backend"
 
 def validate_location(location, location_type="pickup"):
     response = requests.post(
@@ -620,7 +620,7 @@ class AgraTaxisChatbot {
   }
 
   async apiCall(endpoint, data, method = 'POST') {
-    const response = await fetch(`http://localhost:8000${endpoint}`, {
+    const response = await fetch(`https://agrataxis.com/backend${endpoint}`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: method === 'POST' ? JSON.stringify(data) : null

@@ -7,7 +7,7 @@ Quick reference card for all API endpoints at **agrataxis.com**.
 ## All Endpoints at a Glance
 
 ```
-https://agrataxis.com/api
+https://agrataxis.com/backend/api
 ├── GET    /vehicles
 ├── GET    /vehicles?passengers=5
 ├── POST   /locations/suggest
@@ -21,7 +21,7 @@ https://agrataxis.com/api
 ## 1️⃣ Get Vehicles
 
 ```bash
-GET https://agrataxis.com/api/vehicles?passengers=5
+GET https://agrataxis.com/backend/api/vehicles?passengers=5
 
 Response: {
   "success": true,
@@ -35,7 +35,7 @@ Response: {
 ## 2️⃣ Location Autocomplete
 
 ```bash
-POST https://agrataxis.com/api/locations/suggest
+POST https://agrataxis.com/backend/api/locations/suggest
 
 {
   "query": "kan",
@@ -53,7 +53,7 @@ Response: {
 ## 3️⃣ Validate Location
 
 ```bash
-POST https://agrataxis.com/api/bot/location
+POST https://agrataxis.com/backend/api/bot/location
 
 {
   "location": "colombo",
@@ -74,7 +74,7 @@ Response: {
 ## 4️⃣ Calculate Distance
 
 ```bash
-POST https://agrataxis.com/api/locations/distance
+POST https://agrataxis.com/backend/api/locations/distance
 
 {
   "from": "Colombo",
@@ -94,7 +94,7 @@ Response: {
 ## 5️⃣ Calculate Fare
 
 ```bash
-POST https://agrataxis.com/api/bot/calculate
+POST https://agrataxis.com/backend/api/bot/calculate
 
 {
   "serviceType": "Passenger",
@@ -241,7 +241,7 @@ Fare = Total Distance × Rate
 
 ```javascript
 // Validate location and calculate fare
-const response = await fetch('https://agrataxis.com/api/bot/calculate', {
+const response = await fetch('https://agrataxis.com/backend/api/bot/calculate', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -267,7 +267,7 @@ console.log(`Fare: Rs. ${estimatedFare}`);
 import requests
 
 response = requests.post(
-  'https://agrataxis.com/api/bot/calculate',
+  'https://agrataxis.com/backend/api/bot/calculate',
   json={
     'serviceType': 'Passenger',
     'pickup': 'Colombo',

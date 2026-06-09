@@ -13,16 +13,16 @@ Q1: Service Type (Passenger/Lorry)
   ↓ USER INPUT
   ↓
 Q2: Pickup Location
-  ↓ USER INPUT → API: /api/bot/location (validate)
+  ↓ USER INPUT → API: https://agrataxis.com/backend/api/bot/location (validate)
   ↓
 Q3: Destination Location
-  ↓ USER INPUT → API: /api/bot/location (validate)
+  ↓ USER INPUT → API: https://agrataxis.com/backend/api/bot/location (validate)
   ↓
 Q4: Passengers (1-60) [if Passenger]
   ↓ USER INPUT
   ↓
 Q5: Vehicle Selection
-  ↓ [API: /api/vehicles called with passenger count]
+  ↓ [API: https://agrataxis.com/backend/api/vehicles called with passenger count]
   ↓ USER INPUT
   ↓
 Q6: AC/Non-AC [if available]
@@ -32,7 +32,7 @@ Q7: Trip Type (One Way/Round Trip)
   ↓ USER INPUT
   ↓
 Q8: Add Stops? (Optional)
-  ↓ USER INPUT → API: /api/bot/location (validate stops)
+  ↓ USER INPUT → API: https://agrataxis.com/backend/api/bot/location (validate stops)
   ↓
 CALCULATE FARE
   ↓ API: /api/bot/calculate (send all data)
@@ -102,9 +102,9 @@ Did you mean one of these?
 Please choose or type exact location...
 ```
 
-**API CALL 1: /api/bot/location**
+**API CALL 1: https://agrataxis.com/backend/api/bot/location**
 ```
-POST /api/bot/location
+POST https://agrataxis.com/backend/api/bot/location
 {
   "location": "colombo",
   "type": "pickup"
@@ -153,9 +153,9 @@ Where are you going?
 kandy
 ```
 
-**API CALL 2: /api/bot/location**
+**API CALL 2: https://agrataxis.com/backend/api/bot/location**
 ```
-POST /api/bot/location
+POST https://agrataxis.com/backend/api/bot/location
 {
   "location": "kandy",
   "type": "destination"
@@ -224,9 +224,9 @@ Please choose vehicle name or number
 passengers = 5
 ```
 
-**API CALL 3: /api/vehicles?passengers=5**
+**API CALL 3: https://agrataxis.com/backend/api/vehicles?passengers=5**
 ```
-GET /api/vehicles?passengers=5
+GET https://agrataxis.com/backend/api/vehicles?passengers=5
 ```
 
 **API Response:**
@@ -384,9 +384,9 @@ Reply: Stop name or "No" to continue
 No
 ```
 
-**API CALL 4: /api/bot/location (for each stop)**
+**API CALL 4: https://agrataxis.com/backend/api/bot/location (for each stop)**
 ```
-POST /api/bot/location
+POST https://agrataxis.com/backend/api/bot/location
 {
   "location": "Negombo",
   "type": "stop"
@@ -593,13 +593,13 @@ I need a booking:
 | User Input | Bot Action | API Call | Data Stored |
 |-----------|-----------|----------|-------------|
 | Service Type | Parse choice | None | serviceType |
-| Pickup Location | Validate location | `/api/bot/location` | pickup, coordinates |
-| Destination | Validate location | `/api/bot/location` | destination, coordinates |
-| Passenger Count | Parse number | `/api/vehicles` | passengers |
+| Pickup Location | Validate location | `https://agrataxis.com/backend/api/bot/location` | pickup, coordinates |
+| Destination | Validate location | `https://agrataxis.com/backend/api/bot/location` | destination, coordinates |
+| Passenger Count | Parse number | `https://agrataxis.com/backend/api/vehicles` | passengers |
 | Vehicle | Get vehicle details | None (from Q4 response) | vehicle |
 | AC/Non-AC | Get price | None | acOption, pricePerKm |
 | Trip Type | Parse choice | None | tripType |
-| Add Stops | Validate each stop | `/api/bot/location` x N | stops array |
+| Add Stops | Validate each stop | `https://agrataxis.com/backend/api/bot/location` x N | stops array |
 | Ready | Calculate all | `/api/bot/calculate` | estimate |
 | Confirm | Generate WhatsApp link | None | booking sent |
 
@@ -674,11 +674,11 @@ Same as above + Stops + Confirmation
 Q1 Service Type
   ↓ (No API)
 Q2 Pickup Location
-  ↓ API: /api/bot/location ✓ (validate)
+  ↓ API: https://agrataxis.com/backend/api/bot/location ✓ (validate)
 Q3 Destination Location
-  ↓ API: /api/bot/location ✓ (validate)
+  ↓ API: https://agrataxis.com/backend/api/bot/location ✓ (validate)
 Q4 Passenger Count
-  ↓ API: /api/vehicles ✓ (get filtered list)
+  ↓ API: https://agrataxis.com/backend/api/vehicles ✓ (get filtered list)
 Q5 Vehicle Selection
   ↓ (No API)
 Q6 AC/Non-AC
@@ -686,7 +686,7 @@ Q6 AC/Non-AC
 Q7 Trip Type
   ↓ (No API)
 Q8 Stops
-  ↓ API: /api/bot/location ✓ (validate each stop)
+  ↓ API: https://agrataxis.com/backend/api/bot/location ✓ (validate each stop)
 Ready to Calculate
   ↓ API: /api/bot/calculate ✓ (final estimate)
 Book

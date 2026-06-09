@@ -6,7 +6,7 @@ Complete API documentation for **agrataxis.com** - all files and quick navigatio
 
 ## Quick Start
 
-**Base URL:** `https://agrataxis.com/api`
+**Base URL:** `https://agrataxis.com/backend/api`
 
 **5 Endpoints:**
 1. `GET /vehicles` - Get vehicle list
@@ -126,7 +126,7 @@ Complete API documentation for **agrataxis.com** - all files and quick navigatio
 
 ### Endpoint 1: Get Vehicles
 ```
-GET https://agrataxis.com/api/vehicles?passengers=5
+GET https://agrataxis.com/backend/api/vehicles?passengers=5
 
 Returns: List of vehicles filtered by passenger count
 Used in: Booking step 4 (Vehicle Selection)
@@ -138,7 +138,7 @@ Used in: Booking step 4 (Vehicle Selection)
 
 ### Endpoint 2: Location Autocomplete
 ```
-POST https://agrataxis.com/api/locations/suggest
+POST https://agrataxis.com/backend/api/locations/suggest
 
 Body: { "query": "kan", "limit": 5 }
 Returns: Matching location suggestions
@@ -151,7 +151,7 @@ Used in: Booking steps 7-8 (Pickup/Drop)
 
 ### Endpoint 3: Validate Location
 ```
-POST https://agrataxis.com/api/bot/location
+POST https://agrataxis.com/backend/api/bot/location
 
 Body: { "location": "colombo", "type": "pickup" }
 Returns: Validated location with coordinates
@@ -164,7 +164,7 @@ Used in: Booking steps 7-8, Chatbot Q2-Q8
 
 ### Endpoint 4: Calculate Distance
 ```
-POST https://agrataxis.com/api/locations/distance
+POST https://agrataxis.com/backend/api/locations/distance
 
 Body: { "from": "Colombo", "to": "Kandy" }
 Returns: Distance in km, travel time, hill country info
@@ -177,7 +177,7 @@ Used in: Booking step 8 (real-time distance display)
 
 ### Endpoint 5: Calculate Fare
 ```
-POST https://agrataxis.com/api/bot/calculate
+POST https://agrataxis.com/backend/api/bot/calculate
 
 Body: Full booking data (pickup, destination, vehicle, passengers, etc.)
 Returns: Estimated fare with breakdown
@@ -387,7 +387,7 @@ agra-connect/
 ---
 
 **API Version:** 1.0
-**Base URL:** https://agrataxis.com/api
+**Base URL:** https://agrataxis.com/backend/api
 **Last Updated:** 2026-06-09
 **Status:** ✅ Complete and Ready
 
