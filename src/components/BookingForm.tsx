@@ -690,13 +690,25 @@ Thank you!`;
 
                 {step === 1 && (
                   <motion.div key="step-1" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }}>
-                    <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
-                      <CheckCircle2 className="h-4 w-4 text-gold" />
-                      {form.serviceType === "Lorry"
-                        ? "Lorry bookings use the lorry rate table and do not depend on passenger count."
-                        : "Passenger count narrows the vehicle list before route pricing starts."}
-                    </div>
-                    {form.serviceType === "Passenger" ? (
+                    {vehiclesLoading && (
+                      <div className="mb-4 rounded-lg border border-gold/20 bg-gold/5 px-6 py-8 text-center">
+                        <svg className="mx-auto mb-4 h-8 w-8 animate-spin text-gold" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+                        </svg>
+                        <p className="text-sm font-semibold text-white">Loading available vehicles for you</p>
+                        <p className="mt-2 text-xs text-white/60">Please wait while we fetch the latest vehicle options...</p>
+                      </div>
+                    )}
+                    {!vehiclesLoading && (
+                      <>
+                        <div className="mb-4 flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/60">
+                          <CheckCircle2 className="h-4 w-4 text-gold" />
+                          {form.serviceType === "Lorry"
+                            ? "Lorry bookings use the lorry rate table and do not depend on passenger count."
+                            : "Passenger count narrows the vehicle list before route pricing starts."}
+                        </div>
+                        {form.serviceType === "Passenger" ? (
                       <div className="grid gap-5 sm:grid-cols-2">
                         <Field label="Passenger Count" error={errors.pax}>
                           <input type="number" min={1} max={60} value={form.pax} onChange={(e) => update("pax", e.target.value)} className={inputCls("pax")} />
@@ -742,6 +754,8 @@ Thank you!`;
                           Lorry pricing and limits are loaded from the selected lorry type. The route and distance steps still apply.
                         </div>
                       </div>
+                    )}
+                      </>
                     )}
                   </motion.div>
                 )}
