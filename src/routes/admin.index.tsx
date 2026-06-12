@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Car, Download, LogOut, Pencil, Plus } from "lucide-react";
+import { Car, Download, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
 import { adminLogout, isAdminAuthed } from "@/lib/admin-store";
 import { API_BASE } from "@/lib/api";
 import { EMAIL, PHONE, PHONE_DISPLAY, WHATSAPP } from "@/lib/contact";
@@ -61,13 +61,13 @@ const emptyPackagePrices: PackagePrices = {
   day1: { ...emptyDayPrices },
 };
 const emptyLorryRates: LorryRates = {
-  "7ft": { type: "7 FT", hillExtraPerKm: 10, start: 2500, extra: 160, upDown: 120, waiting: 600, waitingHour: 600, between100And130: 2500, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
-  "20ft": { type: "20 FT", hillExtraPerKm: 10, start: 18000, extra: 450, upDown: 300, waiting: 1500, waitingHour: 1500, between100And130: 11000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
-  "8.5ft": { type: "8.5 FT", hillExtraPerKm: 10, start: 3500, extra: 180, upDown: 130, waiting: 700, waitingHour: 700, between100And130: 2000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
-  "10.5ft": { type: "10.5 FT", hillExtraPerKm: 10, start: 6000, extra: 230, upDown: 170, waiting: 800, waitingHour: 800, between100And130: 4500, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
-  "12.5ft": { type: "12.5 FT", hillExtraPerKm: 10, start: 7500, extra: 250, upDown: 180, waiting: 800, waitingHour: 800, between100And130: 4500, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
-  "14.5ft": { type: "14.5 FT", hillExtraPerKm: 10, start: 10000, extra: 320, upDown: 210, waiting: 1000, waitingHour: 1000, between100And130: 7000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
-  "16.5ft": { type: "16.5 FT", hillExtraPerKm: 10, start: 11000, extra: 330, upDown: 220, waiting: 1000, waitingHour: 1000, between100And130: 8000, maxUpDownKm: 150, dropMinKm: 100, dropMaxKm: 130 },
+  "7ft": { type: "7 FT", windows: [{ fromKm: 0, toKm: 130, start: 2500, extra: 160 }], upDown: 120, waiting: 600, waitingHour: 600, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "20ft": { type: "20 FT", windows: [{ fromKm: 0, toKm: 130, start: 18000, extra: 450 }], upDown: 300, waiting: 1500, waitingHour: 1500, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "8.5ft": { type: "8.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 3500, extra: 180 }], upDown: 130, waiting: 700, waitingHour: 700, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "10.5ft": { type: "10.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 6000, extra: 230 }], upDown: 170, waiting: 800, waitingHour: 800, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "12.5ft": { type: "12.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 7500, extra: 250 }], upDown: 180, waiting: 800, waitingHour: 800, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "14.5ft": { type: "14.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 10000, extra: 320 }], upDown: 210, waiting: 1000, waitingHour: 1000, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "16.5ft": { type: "16.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 11000, extra: 330 }], upDown: 220, waiting: 1000, waitingHour: 1000, maxUpDownKm: 150, hillExtraPerKm: 10 },
 };
 
 const emptyVehicleForm: VehicleFormInput = {
@@ -405,7 +405,7 @@ function AdminDashboard() {
     }));
   }
 
-  function updateAllLorryRates(field: "hillExtraPerKm" | "maxUpDownKm" | "dropMinKm" | "dropMaxKm", value: number) {
+  function updateAllLorryRates(field: "hillExtraPerKm" | "maxUpDownKm", value: number) {
     setLorryRates((current) => Object.fromEntries(
       Object.entries(current).map(([key, row]) => [key, { ...row, [field]: value }]),
     ) as LorryRates);
@@ -904,6 +904,7 @@ function AdminDashboard() {
                       uploading={lorryImageUploading === slot}
                       disabled={!isLorryEditing || Boolean(lorryImageUploading)}
                       onUpload={(file) => onLorryImageUpload(file, slot)}
+                      onDelete={() => setLorryImageForm((prev) => ({ ...prev, [slot]: undefined }))}
                     />
                   ))}
                 </div>
@@ -1045,6 +1046,7 @@ function AdminDashboard() {
                     uploading={imageUploading === "img"}
                     disabled={Boolean(imageUploading)}
                     onUpload={(file) => onVehicleImageUpload(file, "img")}
+                    onDelete={() => updateVehicleForm("img", "/assets/car.jpg")}
                   />
                   <VehicleImageInput
                     label="Second image"
@@ -1053,6 +1055,7 @@ function AdminDashboard() {
                     uploading={imageUploading === "img2"}
                     disabled={Boolean(imageUploading)}
                     onUpload={(file) => onVehicleImageUpload(file, "img2")}
+                    onDelete={() => updateVehicleForm("img2", undefined)}
                   />
                 </div>
               </div>
@@ -1357,6 +1360,7 @@ function VehicleImageInput({
   uploading,
   disabled,
   onUpload,
+  onDelete,
 }: {
   label: string;
   image?: string;
@@ -1364,13 +1368,26 @@ function VehicleImageInput({
   uploading: boolean;
   disabled: boolean;
   onUpload: (file: File | undefined) => void;
+  onDelete?: () => void;
 }) {
   return (
     <div className="grid gap-3">
       <p className="text-xs font-semibold text-charcoal">{label}</p>
       <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-white shadow-soft">
         {image ? (
-          <img src={image} alt={alt} className="h-full w-full object-cover" />
+          <>
+            <img src={image} alt={alt} className="h-full w-full object-cover" />
+            {!disabled && onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                className="absolute right-2 top-2 rounded-lg bg-red-500 p-2 text-white hover:bg-red-600 transition-colors"
+                title="Delete image"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
+          </>
         ) : (
           <div className="flex h-full items-center justify-center text-xs font-semibold text-muted-foreground">
             No image
@@ -1508,16 +1525,11 @@ function LorryRateEditorTable({
   const firstRow = rows[0]?.[1] ?? emptyLorryRates["7ft"];
   const columns: Array<{ key: keyof LorryRateRow; label: string; type?: "text" | "number" }> = [
     { key: "type", label: "Type", type: "text" },
-    { key: "hillExtraPerKm", label: "Hill / KM" },
-    { key: "start", label: "Start" },
-    { key: "extra", label: "Extra" },
     { key: "upDown", label: "Up & Down" },
     { key: "waiting", label: "Waiting" },
     { key: "waitingHour", label: "Waiting Hour" },
-    { key: "between100And130", label: "Between 100-130 KM" },
     { key: "maxUpDownKm", label: "Up/Down Limit" },
-    { key: "dropMinKm", label: "Drop Min" },
-    { key: "dropMaxKm", label: "Drop Max" },
+    { key: "hillExtraPerKm", label: "Hill / KM" },
   ];
 
   return (
@@ -1550,26 +1562,6 @@ function LorryRateEditorTable({
             onChange={(event) => onChangeAll("maxUpDownKm", Number(event.target.value))}
             className={adminInputClass}
           />
-        </AdminField>
-        <AdminField label="Drop range">
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="number"
-              min={0}
-              value={firstRow.dropMinKm}
-              disabled={disabled}
-              onChange={(event) => onChangeAll("dropMinKm", Number(event.target.value))}
-              className={adminInputClass}
-            />
-            <input
-              type="number"
-              min={0}
-              value={firstRow.dropMaxKm}
-              disabled={disabled}
-              onChange={(event) => onChangeAll("dropMaxKm", Number(event.target.value))}
-              className={adminInputClass}
-            />
-          </div>
         </AdminField>
       </div>
 

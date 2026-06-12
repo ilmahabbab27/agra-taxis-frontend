@@ -448,7 +448,7 @@ export function BookingForm() {
 
           const lorryIsRoundTrip = form.trip === 'round-trip';
           const lorryDays = Number(form.days || 1);
-          const lorryDropMaxKm = activeLorryRate?.dropMaxKm ?? 130;
+          const lorryStartFeeLimit = activeLorryRate?.startFeeLimit ?? 130;
           const lorryMaxUpDownKm = activeLorryRate?.maxUpDownKm ?? 150;
           let lorryStartCharge = 0;
           let lorryExtraKm = 0;
@@ -467,11 +467,11 @@ export function BookingForm() {
               }
             } else if (activeLorryRate.between100And130 && totalKm >= 100 && totalKm <= 130) {
               lorryStartCharge = activeLorryRate.between100And130;
-            } else if (totalKm <= lorryDropMaxKm) {
+            } else if (totalKm <= lorryStartFeeLimit) {
               lorryStartCharge = activeLorryRate.start;
             } else {
               lorryStartCharge = activeLorryRate.start;
-              lorryExtraKm = Math.max(totalKm - lorryDropMaxKm, 0);
+              lorryExtraKm = Math.max(totalKm - lorryStartFeeLimit, 0);
               lorryExtraCharge = lorryExtraKm * activeLorryRate.extra;
             }
           }

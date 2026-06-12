@@ -41,18 +41,21 @@ export type StayPrices = {
   day5: number;
 };
 
-export type LorryRateRow = {
-  type: string;
-  hillExtraPerKm: number;
+export type LorryRateWindow = {
+  fromKm: number;
+  toKm: number | null;
   start: number;
   extra: number;
+};
+
+export type LorryRateRow = {
+  type: string;
+  windows: LorryRateWindow[];
   upDown: number;
   waiting: number;
   waitingHour: number;
-  between100And130: number;
   maxUpDownKm: number;
-  dropMinKm: number;
-  dropMaxKm: number;
+  hillExtraPerKm: number;
 };
 
 export type LorryRates = Record<string, LorryRateRow>;
@@ -473,18 +476,39 @@ function normalizeLorryRates(raw: unknown): LorryRates {
   const s = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   return Object.entries(s).reduce<LorryRates>((normalized, [key, row]) => {
     const data = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+
+    let windows: LorryRateWindow[] = [];
+    if (Array.isArray(data.windows)) {
+      windows = (data.windows as unknown[]).map((w: unknown) => {
+        const window = w && typeof w === "object" ? (w as Record<string, unknown>) : {};
+        return {
+          fromKm: Math.max(0, Number(window.fromKm) || 0),
+          toKm: window.toKm === null ? null : (window.toKm ? Math.max(0, Number(window.toKm)) : null),
+          start: Math.max(0, Number(window.start) || 0),
+          extra: Math.max(0, Number(window.extra) || 0),
+        };
+      });
+    } else if (data.start || data.startFeeLimit) {
+      windows = [{
+        fromKm: 0,
+        toKm: Math.max(0, Number(data.startFeeLimit ?? 130) || 0),
+        start: Math.max(0, Number(data.start) || 0),
+        extra: Math.max(0, Number(data.extra) || 0),
+      }];
+    }
+
+    if (windows.length === 0) {
+      windows = [{ fromKm: 0, toKm: null, start: 0, extra: 0 }];
+    }
+
     normalized[key] = {
       type: String(data.type || key),
-      hillExtraPerKm: Math.max(0, Number(data.hillExtraPerKm ?? data.hill_extra_per_km ?? 10) || 0),
-      start: Math.max(0, Number(data.start) || 0),
-      extra: Math.max(0, Number(data.extra) || 0),
+      windows,
       upDown: Math.max(0, Number(data.upDown ?? data.up_down) || 0),
       waiting: Math.max(0, Number(data.waiting) || 0),
       waitingHour: Math.max(0, Number(data.waitingHour ?? data.waiting_hour) || 0),
-      between100And130: Math.max(0, Number(data.between100And130 ?? data.between_100_130) || 0),
       maxUpDownKm: Math.max(0, Number(data.maxUpDownKm ?? data.max_up_down_km ?? 150) || 0),
-      dropMinKm: Math.max(0, Number(data.dropMinKm ?? data.drop_min_km ?? 100) || 0),
-      dropMaxKm: Math.max(0, Number(data.dropMaxKm ?? data.drop_max_km ?? 130) || 0),
+      hillExtraPerKm: Math.max(0, Number(data.hillExtraPerKm ?? data.hill_extra_per_km ?? 10) || 0),
     };
     return normalized;
   }, {});
