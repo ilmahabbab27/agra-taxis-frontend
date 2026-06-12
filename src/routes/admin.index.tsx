@@ -1046,7 +1046,7 @@ function AdminDashboard() {
                     uploading={imageUploading === "img"}
                     disabled={Boolean(imageUploading)}
                     onUpload={(file) => onVehicleImageUpload(file, "img")}
-                    onDelete={() => updateVehicleForm("img", "/assets/car.jpg")}
+                    onDelete={() => updateVehicleForm("img", "")}
                   />
                   <VehicleImageInput
                     label="Second image"
