@@ -44,18 +44,16 @@ export type StayPrices = {
 export type LorryRateWindow = {
   fromKm: number;
   toKm: number | null;
-  start: number;
-  extra: number;
+  rate: number;
+  extraPerKm: number;
+  hillExtraPerKm?: number;
 };
 
 export type LorryRateRow = {
   type: string;
   windows: LorryRateWindow[];
-  upDown: number;
-  waiting: number;
-  waitingHour: number;
-  maxUpDownKm: number;
-  hillExtraPerKm: number;
+  extraUpDownCharge: number;
+  waitingChargePerHour: number;
 };
 
 export type LorryRates = Record<string, LorryRateRow>;
@@ -478,37 +476,35 @@ function normalizeLorryRates(raw: unknown): LorryRates {
     const data = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
 
     let windows: LorryRateWindow[] = [];
+
+    // Parse windows array (new format)
     if (Array.isArray(data.windows)) {
       windows = (data.windows as unknown[]).map((w: unknown) => {
         const window = w && typeof w === "object" ? (w as Record<string, unknown>) : {};
         return {
           fromKm: Math.max(0, Number(window.fromKm) || 0),
           toKm: window.toKm === null ? null : (window.toKm ? Math.max(0, Number(window.toKm)) : null),
-          start: Math.max(0, Number(window.start) || 0),
-          extra: Math.max(0, Number(window.extra) || 0),
+          rate: Math.max(0, Number(window.rate ?? window.start) || 0),
+          extraPerKm: Math.max(0, Number(window.extraPerKm ?? window.extra) || 0),
         };
       });
-    } else if (data.start || data.startFeeLimit) {
-      windows = [{
-        fromKm: 0,
-        toKm: Math.max(0, Number(data.startFeeLimit ?? 130) || 0),
-        start: Math.max(0, Number(data.start) || 0),
-        extra: Math.max(0, Number(data.extra) || 0),
-      }];
+    } else if (data.startRate && typeof data.startRate === "object") {
+      // Support startRate object format
+      const sr = data.startRate as Record<string, unknown>;
+      const limit = Math.max(0, Number(sr.limit) || 130);
+      const rate = Math.max(0, Number(sr.rate) || 0);
+      windows = [{ fromKm: 0, toKm: limit, rate, extraPerKm: Math.max(0, Number(data.extraKmCharge) || 0) }];
     }
 
     if (windows.length === 0) {
-      windows = [{ fromKm: 0, toKm: null, start: 0, extra: 0 }];
+      windows = [{ fromKm: 0, toKm: 130, rate: 0, extraPerKm: 0 }];
     }
 
     normalized[key] = {
       type: String(data.type || key),
       windows,
-      upDown: Math.max(0, Number(data.upDown ?? data.up_down) || 0),
-      waiting: Math.max(0, Number(data.waiting) || 0),
-      waitingHour: Math.max(0, Number(data.waitingHour ?? data.waiting_hour) || 0),
-      maxUpDownKm: Math.max(0, Number(data.maxUpDownKm ?? data.max_up_down_km ?? 150) || 0),
-      hillExtraPerKm: Math.max(0, Number(data.hillExtraPerKm ?? data.hill_extra_per_km ?? 10) || 0),
+      extraUpDownCharge: Math.max(0, Number(data.extraUpDownCharge ?? data.upDown ?? data.up_down) || 0),
+      waitingChargePerHour: Math.max(0, Number(data.waitingChargePerHour ?? data.waitingHour ?? data.waiting_hour) || 0),
     };
     return normalized;
   }, {});

@@ -61,13 +61,13 @@ const emptyPackagePrices: PackagePrices = {
   day1: { ...emptyDayPrices },
 };
 const emptyLorryRates: LorryRates = {
-  "7ft": { type: "7 FT", windows: [{ fromKm: 0, toKm: 130, start: 2500, extra: 160 }], upDown: 120, waiting: 600, waitingHour: 600, maxUpDownKm: 150, hillExtraPerKm: 10 },
-  "20ft": { type: "20 FT", windows: [{ fromKm: 0, toKm: 130, start: 18000, extra: 450 }], upDown: 300, waiting: 1500, waitingHour: 1500, maxUpDownKm: 150, hillExtraPerKm: 10 },
-  "8.5ft": { type: "8.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 3500, extra: 180 }], upDown: 130, waiting: 700, waitingHour: 700, maxUpDownKm: 150, hillExtraPerKm: 10 },
-  "10.5ft": { type: "10.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 6000, extra: 230 }], upDown: 170, waiting: 800, waitingHour: 800, maxUpDownKm: 150, hillExtraPerKm: 10 },
-  "12.5ft": { type: "12.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 7500, extra: 250 }], upDown: 180, waiting: 800, waitingHour: 800, maxUpDownKm: 150, hillExtraPerKm: 10 },
-  "14.5ft": { type: "14.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 10000, extra: 320 }], upDown: 210, waiting: 1000, waitingHour: 1000, maxUpDownKm: 150, hillExtraPerKm: 10 },
-  "16.5ft": { type: "16.5 FT", windows: [{ fromKm: 0, toKm: 130, start: 11000, extra: 330 }], upDown: 220, waiting: 1000, waitingHour: 1000, maxUpDownKm: 150, hillExtraPerKm: 10 },
+  "7ft": { type: "7 FT", windows: [{ fromKm: 0, toKm: 130, rate: 2500, extraPerKm: 160 }], extraUpDownCharge: 120, waitingChargePerHour: 600 },
+  "20ft": { type: "20 FT", windows: [{ fromKm: 0, toKm: 130, rate: 18000, extraPerKm: 450 }], extraUpDownCharge: 300, waitingChargePerHour: 1500 },
+  "8.5ft": { type: "8.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 3500, extraPerKm: 180 }], extraUpDownCharge: 130, waitingChargePerHour: 700 },
+  "10.5ft": { type: "10.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 6000, extraPerKm: 230 }], extraUpDownCharge: 170, waitingChargePerHour: 800 },
+  "12.5ft": { type: "12.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 7500, extraPerKm: 250 }], extraUpDownCharge: 180, waitingChargePerHour: 800 },
+  "14.5ft": { type: "14.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 10000, extraPerKm: 320 }], extraUpDownCharge: 210, waitingChargePerHour: 1000 },
+  "16.5ft": { type: "16.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 11000, extraPerKm: 330 }], extraUpDownCharge: 220, waitingChargePerHour: 1000 },
 };
 
 const emptyVehicleForm: VehicleFormInput = {
@@ -395,20 +395,88 @@ function AdminDashboard() {
     }));
   }
 
-  function updateLorryRate(key: string, field: keyof LorryRateRow, value: string | number) {
-    setLorryRates((current) => ({
-      ...current,
-      [key]: {
-        ...(current[key] ?? emptyLorryRates["7ft"]),
-        [field]: field === "type" ? String(value) : Number(value),
-      },
-    }));
+  function updateLorryRate(key: string, field: string, value: string | number | null) {
+    setLorryRates((current) => {
+      const row = current[key] ?? emptyLorryRates["7ft"];
+
+      // Handle nested window fields like "windows.0.rate"
+      if (field.startsWith("windows.")) {
+        const parts = field.split(".");
+        const windowIdx = parseInt(parts[1], 10);
+        const windowField = parts[2];
+        const windows = [...row.windows];
+
+        if (windows[windowIdx]) {
+          if (windowField === "toKm") {
+            windows[windowIdx] = {
+              ...windows[windowIdx],
+              [windowField]: value === null || value === "" ? null : Number(value),
+            };
+          } else {
+            windows[windowIdx] = {
+              ...windows[windowIdx],
+              [windowField]: value === null || value === "" ? undefined : Number(value),
+            };
+          }
+        }
+
+        return {
+          ...current,
+          [key]: { ...row, windows },
+        };
+      }
+
+      // Handle regular fields
+      return {
+        ...current,
+        [key]: {
+          ...row,
+          [field]: field === "type" ? String(value) : Number(value),
+        },
+      };
+    });
   }
 
-  function updateAllLorryRates(field: "hillExtraPerKm" | "maxUpDownKm", value: number) {
+  function updateAllLorryRates(field: string, value: number) {
     setLorryRates((current) => Object.fromEntries(
       Object.entries(current).map(([key, row]) => [key, { ...row, [field]: value }]),
     ) as LorryRates);
+  }
+
+  function addLorryWindow(key: string) {
+    setLorryRates((current) => {
+      const row = current[key];
+      if (!row) return current;
+
+      const lastWindow = row.windows[row.windows.length - 1];
+      const nextFromKm = (lastWindow?.toKm ?? 130) + 1;
+
+      return {
+        ...current,
+        [key]: {
+          ...row,
+          windows: [
+            ...row.windows,
+            { fromKm: nextFromKm, toKm: null, rate: 0, extraPerKm: 0 }
+          ],
+        },
+      };
+    });
+  }
+
+  function removeLorryWindow(key: string, idx: number) {
+    setLorryRates((current) => {
+      const row = current[key];
+      if (!row || row.windows.length <= 1) return current;
+
+      return {
+        ...current,
+        [key]: {
+          ...row,
+          windows: row.windows.filter((_, i) => i !== idx),
+        },
+      };
+    });
   }
 
   function updateLorryImageForm(key: ImageSlot, value: string | undefined) {
@@ -913,6 +981,8 @@ function AdminDashboard() {
                 rates={lorryRates}
                 onChange={updateLorryRate}
                 onChangeAll={updateAllLorryRates}
+                onAddWindow={addLorryWindow}
+                onRemoveWindow={removeLorryWindow}
                 disabled={!isLorryEditing}
               />
               <div className="mt-4 flex items-center justify-end gap-3">
@@ -1514,82 +1584,166 @@ function LorryRateEditorTable({
   rates,
   onChange,
   onChangeAll,
+  onAddWindow,
+  onRemoveWindow,
   disabled = false,
 }: {
   rates: LorryRates;
-  onChange: (key: string, field: keyof LorryRateRow, value: string | number) => void;
-  onChangeAll: (field: "hillExtraPerKm" | "maxUpDownKm" | "dropMinKm" | "dropMaxKm", value: number) => void;
+  onChange: (key: string, field: string, value: string | number | null) => void;
+  onChangeAll: (field: string, value: number) => void;
+  onAddWindow: (key: string) => void;
+  onRemoveWindow: (key: string, idx: number) => void;
   disabled?: boolean;
 }) {
   const rows = Object.entries(rates);
-  const firstRow = rows[0]?.[1] ?? emptyLorryRates["7ft"];
-  const columns: Array<{ key: keyof LorryRateRow; label: string; type?: "text" | "number" }> = [
-    { key: "type", label: "Type", type: "text" },
-    { key: "upDown", label: "Up & Down" },
-    { key: "waiting", label: "Waiting" },
-    { key: "waitingHour", label: "Waiting Hour" },
-    { key: "maxUpDownKm", label: "Up/Down Limit" },
-    { key: "hillExtraPerKm", label: "Hill / KM" },
-  ];
 
   return (
     <div className="rounded-xl border border-border p-4">
-      <div className="mb-5 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-5 flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lorry Rates</p>
-          <p className="text-sm font-semibold text-charcoal">Vehicle-specific rate table</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lorry Rate Configuration</p>
+          <p className="text-sm font-semibold text-charcoal">All types with distance-based pricing</p>
         </div>
-        <p className="text-xs font-medium text-muted-foreground">Add one row per lorry type</p>
       </div>
 
-      <div className="mb-6 grid gap-3 lg:grid-cols-[1fr_1fr_1fr]">
-        <AdminField label="Hill surcharge per km">
-          <input
-            type="number"
-            min={0}
-            value={firstRow.hillExtraPerKm}
-            disabled={disabled}
-            onChange={(event) => onChangeAll("hillExtraPerKm", Number(event.target.value))}
-            className={adminInputClass}
-          />
-        </AdminField>
-        <AdminField label="Up & down limit km">
-          <input
-            type="number"
-            min={0}
-            value={firstRow.maxUpDownKm}
-            disabled={disabled}
-            onChange={(event) => onChangeAll("maxUpDownKm", Number(event.target.value))}
-            className={adminInputClass}
-          />
-        </AdminField>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1180px] border-collapse text-sm">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              {columns.map((column) => (
-                <th key={column.key} className="px-2 py-2 font-semibold">{column.label}</th>
-              ))}
+            <tr className="border-b border-border bg-muted/50">
+              <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-20">Type</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">From KM</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">To KM</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Rate</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground border-r border-border">Extra/KM</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground border-r border-border">Hill Extra/KM</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Up/Down</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Waiting/Hr</th>
+              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Action</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(([key, row]) => (
-              <tr key={key} className="border-b border-border/70 last:border-0">
-                {columns.map((column) => (
-                  <td key={column.key} className="px-2 py-2">
+              row.windows.map((window, idx) => (
+                <tr key={`${key}-${idx}`} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                  {/* Type cell (only first row of each type) */}
+                  {idx === 0 ? (
+                    <td rowSpan={row.windows.length} className="px-3 py-2 border-r border-border align-middle">
+                      <input
+                        type="text"
+                        value={row.type}
+                        disabled={disabled}
+                        onChange={(event) => onChange(key, "type", event.target.value)}
+                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                      />
+                    </td>
+                  ) : null}
+
+                  {/* Window distance range */}
+                  <td className="px-3 py-2 text-center">
                     <input
-                      type={column.type === "text" ? "text" : "number"}
-                      min={column.type === "text" ? undefined : 0}
-                      value={row[column.key]}
+                      type="number"
+                      min={0}
+                      value={window.fromKm}
                       disabled={disabled}
-                      onChange={(event) => onChange(key, column.key, column.type === "text" ? event.target.value : Number(event.target.value))}
-                      className="w-full rounded-xl border border-border bg-background px-3 py-3 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-70"
+                      onChange={(event) => onChange(key, `windows.${idx}.fromKm`, Number(event.target.value))}
+                      className="w-16 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
                     />
                   </td>
-                ))}
-              </tr>
+                  <td className="px-3 py-2 text-center">
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="∞"
+                      value={window.toKm ?? ""}
+                      disabled={disabled}
+                      onChange={(event) => onChange(key, `windows.${idx}.toKm`, event.target.value ? Number(event.target.value) : null)}
+                      className="w-16 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </td>
+
+                  {/* Normal rates */}
+                  <td className="px-3 py-2 text-center">
+                    <input
+                      type="number"
+                      min={0}
+                      value={window.rate}
+                      disabled={disabled}
+                      onChange={(event) => onChange(key, `windows.${idx}.rate`, Number(event.target.value))}
+                      className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-center border-r border-border">
+                    <input
+                      type="number"
+                      min={0}
+                      value={window.extraPerKm}
+                      disabled={disabled}
+                      onChange={(event) => onChange(key, `windows.${idx}.extraPerKm`, Number(event.target.value))}
+                      className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </td>
+
+                  {/* Hill country extra/km */}
+                  <td className="px-3 py-2 text-center border-r border-border">
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder={String(window.extraPerKm)}
+                      value={window.hillExtraPerKm ?? ""}
+                      disabled={disabled}
+                      onChange={(event) => onChange(key, `windows.${idx}.hillExtraPerKm`, event.target.value ? Number(event.target.value) : null)}
+                      className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                    />
+                  </td>
+
+                  {/* Extra fields (only first row of each type) */}
+                  {idx === 0 ? (
+                    <>
+                      <td rowSpan={row.windows.length} className="px-3 py-2 text-center align-middle">
+                        <input
+                          type="number"
+                          min={0}
+                          value={row.extraUpDownCharge}
+                          disabled={disabled}
+                          onChange={(event) => onChange(key, "extraUpDownCharge", Number(event.target.value))}
+                          className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                      </td>
+                      <td rowSpan={row.windows.length} className="px-3 py-2 text-center align-middle">
+                        <input
+                          type="number"
+                          min={0}
+                          value={row.waitingChargePerHour}
+                          disabled={disabled}
+                          onChange={(event) => onChange(key, "waitingChargePerHour", Number(event.target.value))}
+                          className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
+                        />
+                      </td>
+                      <td rowSpan={row.windows.length} className="px-3 py-2 text-center align-middle border-l border-border">
+                        <button
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => onAddWindow(key)}
+                          className="text-xs px-2 py-1 rounded bg-gold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                        >
+                          +
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <td className="px-3 py-2 text-center border-l border-border">
+                      <button
+                        type="button"
+                        disabled={disabled || row.windows.length <= 1}
+                        onClick={() => onRemoveWindow(key, idx)}
+                        className="text-xs px-2.5 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))
             ))}
           </tbody>
         </table>
