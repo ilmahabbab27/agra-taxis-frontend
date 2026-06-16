@@ -360,14 +360,12 @@ export function BookingForm() {
                                                                                     const activeLorryRate = resolvedLorryRate;
                                                                                         const activeLorryType = activeLorryRate?.type || "7 FT";
 
-          // Lorry: Base Fee + Extra Fee + Hill Surcharge + Up/Down Charge + Waiting Charge
+          // Lorry: Base Fee + Extra Fee (hill or non-hill rate) + Up/Down Charge + Waiting Charge
           let lorryBaseFee = 0;
           let lorryExtraKm = 0;
           let lorryExtraFee = 0;
-          let lorryHillSurcharge = 0;
           let lorryUpDownCharge = 0;
           let lorryWaitingCharge = 0;
-          let hillExtraPerKm = 0;
 
           if (totalKm && activeLorryRate?.windows?.length) {
             const windows = activeLorryRate.windows;
@@ -378,23 +376,18 @@ export function BookingForm() {
               if (totalKm >= windowStart) {
                 if (totalKm <= windowEnd) {
                   lorryBaseFee = window.rate;
-                  hillExtraPerKm = window.hillExtraPerKm ?? 0;
                   break;
                 } else {
                   lorryBaseFee = window.rate;
                   lorryExtraKm = totalKm - windowEnd;
-                  lorryExtraFee = lorryExtraKm * window.extraPerKm;
-                  hillExtraPerKm = window.hillExtraPerKm ?? 0;
+                  // Use hillExtraPerKm if hill country, otherwise use extraPerKm
+                  const extraPerKmRate = selectedHillCountry ? (window.hillExtraPerKm ?? 0) : (window.extraPerKm ?? 0);
+                  lorryExtraFee = lorryExtraKm * extraPerKmRate;
                 }
               }
             }
 
-            // Hill surcharge (if hill location)
-            if (selectedHillCountry && hillExtraPerKm > 0) {
-              lorryHillSurcharge = totalKm * hillExtraPerKm;
-            }
-
-            // Up/Down charge (if round-trip)
+            // Up/Down charge (only if round-trip)
             if (form.trip === 'Round Trip') {
               if (selectedHillCountry) {
                 lorryUpDownCharge = activeLorryRate.upDownHill ?? 0;
@@ -414,7 +407,7 @@ export function BookingForm() {
           }
 
           const lorryFare = totalKm && activeLorryRate
-            ? lorryBaseFee + lorryExtraFee + lorryHillSurcharge + lorryUpDownCharge + lorryWaitingCharge
+            ? lorryBaseFee + lorryExtraFee + lorryUpDownCharge + lorryWaitingCharge
             : null;
     const fare = form.serviceType === "Lorry"
       ? lorryFare
@@ -462,7 +455,6 @@ export function BookingForm() {
       lorryStartCharge: lorryBaseFee,
       lorryExtraKm,
       lorryExtraCharge: lorryExtraFee,
-      lorryHillCharge: lorryHillSurcharge,
       lorryHillExtraPerKm: activeLorryRate?.windows?.[0]?.hillExtraPerKm ?? 0,
       lorryUpDownCharge: lorryUpDownCharge,
       lorryWaitingCharge: lorryWaitingCharge,
@@ -878,16 +870,13 @@ Thank you!`;
                           {(summary.lorryExtraKm ?? 0) > 0 && (
                             <p><span className="font-semibold">2. Extra Fee:</span> {summary.lorryExtraKm} km @ {formatLkr(summary.effectivePricePerKm)}/km = {formatLkr(summary.lorryExtraCharge ?? 0)}</p>
                           )}
-                          {summary.isHillCountry && (summary.lorryHillCharge ?? 0) > 0 && (
-                            <p><span className="font-semibold">3. Hill Surcharge:</span> {summary.distanceKm} km × {formatLkr(summary.lorryHillExtraPerKm ?? 0)}/km = {formatLkr(summary.lorryHillCharge ?? 0)}</p>
-                          )}
                           {(summary.lorryUpDownCharge ?? 0) > 0 && (
-                            <p><span className="font-semibold">4. Up/Down Charge:</span> {formatLkr(summary.lorryUpDownCharge ?? 0)}</p>
+                            <p><span className="font-semibold">3. Up/Down Charge:</span> {formatLkr(summary.lorryUpDownCharge ?? 0)}</p>
                           )}
                           {(summary.lorryWaitingCharge ?? 0) > 0 && (
-                            <p><span className="font-semibold">5. Waiting Charge:</span> {formatLkr(summary.lorryWaitingCharge ?? 0)}</p>
+                            <p><span className="font-semibold">4. Waiting Charge:</span> {formatLkr(summary.lorryWaitingCharge ?? 0)}</p>
                           )}
-                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0) + (summary.lorryHillCharge ?? 0) + (summary.lorryUpDownCharge ?? 0) + (summary.lorryWaitingCharge ?? 0))}</p>
+                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0) + (summary.lorryUpDownCharge ?? 0) + (summary.lorryWaitingCharge ?? 0))}</p>
                         </>
                       ) : (
                         <p>Add pickup and destination to calculate the lorry fare.</p>
