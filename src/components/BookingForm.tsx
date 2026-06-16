@@ -63,117 +63,22 @@ type PricingSummary = {
   lorryExtraKm?: number;
   lorryExtraCharge?: number;
   lorryHillCharge?: number;
-  lorryDropMaxKm?: number;
   lorryHillExtraPerKm?: number;
+  lorryUpDownCharge?: number;
+  lorryWaitingCharge?: number;
 };
 
 const INCLUDED_KM_PER_DAY = 150;
 const stepTitles = ["Vehicle Type", "Passengers", "Route", "Charges", "Estimate"];
 const fallbackLorryRates: LorryRates = {
-  "7ft": {
-    type: "7 FT",
-    hillExtraPerKm: 10,
-    start: 2500,
-    extra: 160,
-    upDown: 120,
-    waiting: 600,
-    waitingHour: 600,
-    between100And130: 2500,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "8_5ft": {
-    type: "8.5 FT",
-    hillExtraPerKm: 10,
-    start: 3500,
-    extra: 180,
-    upDown: 130,
-    waiting: 700,
-    waitingHour: 700,
-    between100And130: 2000,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "10_5ft": {
-    type: "10.5 FT",
-    hillExtraPerKm: 10,
-    start: 6000,
-    extra: 230,
-    upDown: 170,
-    waiting: 800,
-    waitingHour: 800,
-    between100And130: 4500,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "12_5ft": {
-    type: "12.5 FT",
-    hillExtraPerKm: 10,
-    start: 7500,
-    extra: 250,
-    upDown: 180,
-    waiting: 800,
-    waitingHour: 800,
-    between100And130: 4500,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "14_5ft": {
-    type: "14.5 FT",
-    hillExtraPerKm: 10,
-    start: 10000,
-    extra: 320,
-    upDown: 210,
-    waiting: 1000,
-    waitingHour: 1000,
-    between100And130: 7000,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "16_5ft": {
-    type: "16.5 FT",
-    hillExtraPerKm: 10,
-    start: 11000,
-    extra: 330,
-    upDown: 220,
-    waiting: 1000,
-    waitingHour: 1000,
-    between100And130: 8000,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "18_5ft": {
-    type: "18.5 FT",
-    hillExtraPerKm: 10,
-    start: 15000,
-    extra: 380,
-    upDown: 270,
-    waiting: 1200,
-    waitingHour: 1200,
-    between100And130: 9000,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
-  "20ft": {
-    type: "20 FT",
-    hillExtraPerKm: 10,
-    start: 18000,
-    extra: 450,
-    upDown: 300,
-    waiting: 1500,
-    waitingHour: 1500,
-    between100And130: 11000,
-    maxUpDownKm: 150,
-    dropMinKm: 100,
-    dropMaxKm: 130,
-  },
+  "7ft": { type: "7 FT", windows: [{ fromKm: 0, toKm: 130, rate: 2500, extraPerKm: 160, hillExtraPerKm: 10 }], upDownNonHill: 120, upDownHill: 200, freeWaitingHours: 2, waitingChargePerHour: 500 },
+  "8_5ft": { type: "8.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 3500, extraPerKm: 180, hillExtraPerKm: 10 }], upDownNonHill: 130, upDownHill: 220, freeWaitingHours: 2, waitingChargePerHour: 600 },
+  "10_5ft": { type: "10.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 6000, extraPerKm: 230, hillExtraPerKm: 10 }], upDownNonHill: 170, upDownHill: 280, freeWaitingHours: 2, waitingChargePerHour: 700 },
+  "12_5ft": { type: "12.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 7500, extraPerKm: 250, hillExtraPerKm: 10 }], upDownNonHill: 180, upDownHill: 300, freeWaitingHours: 2, waitingChargePerHour: 750 },
+  "14_5ft": { type: "14.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 10000, extraPerKm: 320, hillExtraPerKm: 10 }], upDownNonHill: 210, upDownHill: 350, freeWaitingHours: 2, waitingChargePerHour: 800 },
+  "16_5ft": { type: "16.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 11000, extraPerKm: 330, hillExtraPerKm: 10 }], upDownNonHill: 220, upDownHill: 360, freeWaitingHours: 2, waitingChargePerHour: 850 },
+  "18_5ft": { type: "18.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 15000, extraPerKm: 380, hillExtraPerKm: 10 }], upDownNonHill: 270, upDownHill: 450, freeWaitingHours: 2, waitingChargePerHour: 900 },
+  "20ft": { type: "20 FT", windows: [{ fromKm: 0, toKm: 130, rate: 18000, extraPerKm: 450, hillExtraPerKm: 10 }], upDownNonHill: 300, upDownHill: 500, freeWaitingHours: 2, waitingChargePerHour: 800 },
 };
 const fallbackLorryVehicle: VehicleCatalogItem = {
   name: "Agra Lorry",
@@ -251,25 +156,20 @@ export function BookingForm() {
   const activeLorryVehicle = lorryVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"))
     || lorryVehicles[0]
     || null;
-  const lorryRates = activeLorryVehicle?.lorryRates && Object.keys(activeLorryVehicle.lorryRates).length
-    ? activeLorryVehicle.lorryRates
-    : fallbackLorryRates;
+  const lorryRates = activeLorryVehicle?.lorryRates ?? {};
   const lorryOptions = useMemo(() => {
-    const options = Object.entries({
-      ...fallbackLorryRates,
-      ...(activeLorryVehicle?.lorryRates ?? {}),
-    })
+    const ratesToUse = activeLorryVehicle?.lorryRates ?? {};
+    const options = Object.entries(ratesToUse)
       .filter(([, row]) => Boolean(row))
       .map(([key, row]) => [key, { type: String(row.type || key) }] as const);
-    if (options.length) return options;
-    return Object.entries(fallbackLorryRates).map(([key, row]) => [key, { type: row.type }] as const);
+    return options;
   }, [activeLorryVehicle?.lorryRates]);
   const selectedLorryOptionKey = selectedLorryKey || "";
   const resolvedLorryRate = (() => {
     const active = selectedLorryOptionKey && lorryRates[selectedLorryOptionKey]
       ? lorryRates[selectedLorryOptionKey]
       : Object.values(lorryRates)[0];
-    if (active && (active.start > 0 || active.extra > 0 || active.between100And130 > 0)) return active;
+    if (active && active.windows && active.windows.length > 0) return active;
     const fallback = fallbackLorryRates["7ft"];
     return fallback;
   })();
@@ -333,14 +233,28 @@ export function BookingForm() {
         nextVehicles = [...dbVehicles, ...dbLorries];
         nextCategories = Array.from(new Set([...dbCategories, ...dbLorries.map((item) => item.category)]));
         if (dbLorries.length) setLorryCatalog(dbLorries);
-      } catch {
+        // Verify lorries have rates loaded
+        const lorryWithRates = dbLorries.find((l) => l.lorryRates && Object.keys(l.lorryRates).length > 0);
+        if (lorryWithRates) {
+          console.log("✓ Lorry rates loaded from database:", Object.keys(lorryWithRates.lorryRates || {}).length, "types");
+        } else if (dbLorries.length > 0) {
+          console.warn("⚠ Lorries loaded but without rates:", dbLorries.map((l) => l.name));
+        }
+      } catch (error) {
+        console.error("✗ Error loading vehicles from database:", error);
         // Local fallback keeps the inquiry form usable if the backend is offline.
       }
       if (cancelled) return;
       setVehiclesLoading(false);
       setCategoryList(nextCategories);
       setVehicleList(nextVehicles);
-      setLorryCatalog(nextVehicles.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry")));
+      const filteredLorries = nextVehicles.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+      setLorryCatalog(filteredLorries);
+      if (filteredLorries.length === 0) {
+        console.warn("⚠ No lorries found in vehicle list. Total vehicles:", nextVehicles.length, "categories:", nextCategories);
+      } else {
+        console.log("✓ Loaded", filteredLorries.length, "lorries from vehicle list");
+      }
       setForm((current) => {
         if (nextVehicles.some((vehicle) => vehicle.name === current.vehicle)) return current;
         return { ...current, vehicle: nextVehicles[0]?.name || "" };
@@ -446,41 +360,61 @@ export function BookingForm() {
                                                                                     const activeLorryRate = resolvedLorryRate;
                                                                                         const activeLorryType = activeLorryRate?.type || "7 FT";
 
-          const lorryIsRoundTrip = form.trip === 'round-trip';
-          const lorryDays = Number(form.days || 1);
-          const lorryStartFeeLimit = activeLorryRate?.startFeeLimit ?? 130;
-          const lorryMaxUpDownKm = activeLorryRate?.maxUpDownKm ?? 150;
-          let lorryStartCharge = 0;
+          // Lorry: Base Fee + Extra Fee + Hill Surcharge + Up/Down Charge + Waiting Charge
+          let lorryBaseFee = 0;
           let lorryExtraKm = 0;
-          let lorryExtraCharge = 0;
+          let lorryExtraFee = 0;
+          let lorryHillSurcharge = 0;
+          let lorryUpDownCharge = 0;
+          let lorryWaitingCharge = 0;
+          let hillExtraPerKm = 0;
 
-          if (totalKm && activeLorryRate) {
-            if (lorryIsRoundTrip) {
-              if (totalKm <= lorryMaxUpDownKm && activeLorryRate.upDown) {
-                lorryStartCharge = activeLorryRate.upDown;
-              } else {
-                lorryStartCharge = activeLorryRate.upDown || activeLorryRate.start;
-                if (totalKm > lorryMaxUpDownKm) {
-                  lorryExtraKm = Math.max(totalKm - lorryMaxUpDownKm, 0);
-                  lorryExtraCharge = lorryExtraKm * activeLorryRate.extra;
+          if (totalKm && activeLorryRate?.windows?.length) {
+            const windows = activeLorryRate.windows;
+            for (const window of windows) {
+              const windowStart = window.fromKm;
+              const windowEnd = window.toKm ?? totalKm;
+
+              if (totalKm >= windowStart) {
+                if (totalKm <= windowEnd) {
+                  lorryBaseFee = window.rate;
+                  hillExtraPerKm = window.hillExtraPerKm ?? 0;
+                  break;
+                } else {
+                  lorryBaseFee = window.rate;
+                  lorryExtraKm = totalKm - windowEnd;
+                  lorryExtraFee = lorryExtraKm * window.extraPerKm;
+                  hillExtraPerKm = window.hillExtraPerKm ?? 0;
                 }
               }
-            } else if (activeLorryRate.between100And130 && totalKm >= 100 && totalKm <= 130) {
-              lorryStartCharge = activeLorryRate.between100And130;
-            } else if (totalKm <= lorryStartFeeLimit) {
-              lorryStartCharge = activeLorryRate.start;
-            } else {
-              lorryStartCharge = activeLorryRate.start;
-              lorryExtraKm = Math.max(totalKm - lorryStartFeeLimit, 0);
-              lorryExtraCharge = lorryExtraKm * activeLorryRate.extra;
+            }
+
+            // Hill surcharge (if hill location)
+            if (selectedHillCountry && hillExtraPerKm > 0) {
+              lorryHillSurcharge = totalKm * hillExtraPerKm;
+            }
+
+            // Up/Down charge (if round-trip)
+            if (form.trip === 'Round Trip') {
+              if (selectedHillCountry) {
+                lorryUpDownCharge = activeLorryRate.upDownHill ?? 0;
+              } else {
+                lorryUpDownCharge = activeLorryRate.upDownNonHill ?? 0;
+              }
+            }
+
+            // Waiting charge (waitingHours currently 0, but structure ready for input)
+            const waitingHours = 0;
+            const freeWaitingHours = activeLorryRate.freeWaitingHours ?? 0;
+            const waitingChargePerHour = activeLorryRate.waitingChargePerHour ?? 0;
+            if (waitingHours > freeWaitingHours && waitingChargePerHour > 0) {
+              const chargeableHours = waitingHours - freeWaitingHours;
+              lorryWaitingCharge = chargeableHours * waitingChargePerHour;
             }
           }
 
-          const lorryHillExtraPerKm = activeLorryRate?.hillExtraPerKm ?? 0;
-          const lorryHillCharge = selectedHillCountry && totalKm ? totalKm * lorryHillExtraPerKm : 0;
-          const lorryBaseFare = lorryStartCharge + lorryExtraCharge + lorryHillCharge;
           const lorryFare = totalKm && activeLorryRate
-            ? (lorryDays === 1 ? lorryBaseFare : lorryBaseFare * lorryDays)
+            ? lorryBaseFee + lorryExtraFee + lorryHillSurcharge + lorryUpDownCharge + lorryWaitingCharge
             : null;
     const fare = form.serviceType === "Lorry"
       ? lorryFare
@@ -508,14 +442,14 @@ export function BookingForm() {
       trip: form.trip,
       pax: form.pax,
       ac: form.ac,
-      pricePerKm: form.serviceType === "Lorry" ? (activeLorryRate?.extra ?? fallbackLorryRates["7ft"].extra) : selectedPricePerKm,
-      effectivePricePerKm: form.serviceType === "Lorry" ? (activeLorryRate?.extra ?? fallbackLorryRates["7ft"].extra) : selectedPricePerKm,
+      pricePerKm: form.serviceType === "Lorry" ? (activeLorryRate?.windows?.[0]?.extraPerKm ?? fallbackLorryRates["7ft"].windows[0].extraPerKm) : selectedPricePerKm,
+      effectivePricePerKm: form.serviceType === "Lorry" ? (activeLorryRate?.windows?.[0]?.extraPerKm ?? fallbackLorryRates["7ft"].windows[0].extraPerKm) : selectedPricePerKm,
       includedKm,
       additionalKm,
       billableKm,
-      includedDistanceCharge: form.serviceType === "Lorry" ? (activeLorryRate?.start ?? fallbackLorryRates["7ft"].start) : includedDistanceCharge,
-      additionalDistanceCharge: form.serviceType === "Lorry" ? (activeLorryRate?.extra ?? fallbackLorryRates["7ft"].extra) * (totalKm ?? 0) : additionalDistanceCharge,
-      basePackageCharge: form.serviceType === "Lorry" ? (activeLorryRate?.start ?? fallbackLorryRates["7ft"].start) : package1BaseCharge,
+      includedDistanceCharge: form.serviceType === "Lorry" ? (activeLorryRate?.windows?.[0]?.rate ?? fallbackLorryRates["7ft"].windows[0].rate) : includedDistanceCharge,
+      additionalDistanceCharge: form.serviceType === "Lorry" ? (activeLorryRate?.windows?.[0]?.extraPerKm ?? fallbackLorryRates["7ft"].windows[0].extraPerKm) * (totalKm ?? 0) : additionalDistanceCharge,
+      basePackageCharge: form.serviceType === "Lorry" ? (activeLorryRate?.windows?.[0]?.rate ?? fallbackLorryRates["7ft"].windows[0].rate) : package1BaseCharge,
       oneDayPackageDistanceCharge,
       package1Estimate,
       package2Estimate,
@@ -525,12 +459,13 @@ export function BookingForm() {
       destinationPin,
       distanceSource: distance?.source,
       lorryType: activeLorryType,
-      lorryStartCharge,
+      lorryStartCharge: lorryBaseFee,
       lorryExtraKm,
-      lorryExtraCharge,
-      lorryHillCharge,
-      lorryDropMaxKm,
-      lorryHillExtraPerKm,
+      lorryExtraCharge: lorryExtraFee,
+      lorryHillCharge: lorryHillSurcharge,
+      lorryHillExtraPerKm: activeLorryRate?.windows?.[0]?.hillExtraPerKm ?? 0,
+      lorryUpDownCharge: lorryUpDownCharge,
+      lorryWaitingCharge: lorryWaitingCharge,
     });
   }
 
@@ -809,10 +744,10 @@ Thank you!`;
                     {form.serviceType === "Lorry" ? (
                       <div className="sm:col-span-2 space-y-3">
                         <div className="border border-white/10 bg-white/5 px-4 py-3 text-xs leading-relaxed text-white/60">
-                          Lorry pricing uses a separate rate table. Start, extra, up/down, waiting, waiting hour, and between-100-130 km are shown below.
+                          Lorry pricing uses 5 components: base fee, extra km charge, hill surcharge, up/down charge (round-trip), and waiting charge (if applicable).
                         </div>
                         <LorryRateTable
-                          rates={lorryRates && Object.keys(lorryRates).length ? lorryRates : fallbackLorryRates}
+                          rates={lorryRates}
                           selectedKey={selectedLorryOptionKey}
                         />
                       </div>
@@ -870,7 +805,7 @@ Thank you!`;
                         Lorry bookings are priced from the vehicle-specific rate table. The summary below shows the active rates for this vehicle.
                       </div>
                       <LorryRateTable
-                        rates={lorryRates && Object.keys(lorryRates).length ? lorryRates : fallbackLorryRates}
+                        rates={lorryRates}
                         selectedKey={selectedLorryOptionKey}
                       />
                     </div>
@@ -922,15 +857,13 @@ Thank you!`;
               {summary.serviceType === "Lorry" ? (
                 <div className="space-y-4">
                   <p className="text-base leading-7 text-white/80">
-                    Your lorry fare is calculated from the selected type and the route distance.
-                    The base fare covers the starting range, then extra distance is charged per km.
-                    If the route is in hill country, the hill surcharge is added for each km.
+                    Your lorry fare includes: base fee, extra km charges, hill surcharge (if applicable), up/down charges (if round-trip), and waiting charges (if applicable).
                   </p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <SummaryRow label="Lorry type" value={summary.lorryType || "7 FT"} />
                     <SummaryRow label="Distance" value={summary.distanceKm ? `${summary.distanceKm} km` : "Not calculated"} />
-                    <SummaryRow label="Base fare" value={summary.basePackageCharge ? formatLkr(summary.basePackageCharge) : "N/A"} />
-                    <SummaryRow label="Extra/km" value={summary.effectivePricePerKm ? formatLkr(summary.effectivePricePerKm) : "N/A"} />
+                    <SummaryRow label="Trip" value={summary.trip} />
+                    <SummaryRow label="Location" value={summary.isHillCountry ? "Hill Country" : "Plains"} />
                   </div>
                   <div className="border border-white/10 bg-white/5 px-4 py-3">
                     <p className="text-sm font-semibold text-white">Estimated lorry fare</p>
@@ -940,16 +873,21 @@ Thank you!`;
                     <div className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-white/60">
                       {summary.distanceKm ? (
                         <>
-                          <p><span className="font-semibold">Distance:</span> {summary.distanceKm} km</p>
-                          <p><span className="font-semibold">Start fee:</span> {formatLkr(summary.lorryStartCharge ?? 0)}</p>
+                          <p className="font-semibold text-white">5-Component Fare Breakdown:</p>
+                          <p><span className="font-semibold">1. Base Fee:</span> {formatLkr(summary.lorryStartCharge ?? 0)}</p>
                           {(summary.lorryExtraKm ?? 0) > 0 && (
-                            <p><span className="font-semibold">Extra km:</span> {summary.lorryExtraKm} km @ {formatLkr(summary.effectivePricePerKm)}/km = {formatLkr(summary.lorryExtraCharge ?? 0)}</p>
+                            <p><span className="font-semibold">2. Extra Fee:</span> {summary.lorryExtraKm} km @ {formatLkr(summary.effectivePricePerKm)}/km = {formatLkr(summary.lorryExtraCharge ?? 0)}</p>
                           )}
                           {summary.isHillCountry && (summary.lorryHillCharge ?? 0) > 0 && (
-                            <p><span className="font-semibold">Hill surcharge:</span> {summary.distanceKm} km × {formatLkr(summary.lorryHillExtraPerKm ?? 0)}/km = {formatLkr(summary.lorryHillCharge ?? 0)}</p>
+                            <p><span className="font-semibold">3. Hill Surcharge:</span> {summary.distanceKm} km × {formatLkr(summary.lorryHillExtraPerKm ?? 0)}/km = {formatLkr(summary.lorryHillCharge ?? 0)}</p>
                           )}
-                          {Number(summary.days) > 1 && <p><span className="font-semibold">Days:</span> × {summary.days} days</p>}
-                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0) + (summary.lorryHillCharge ?? 0))}</p>
+                          {(summary.lorryUpDownCharge ?? 0) > 0 && (
+                            <p><span className="font-semibold">4. Up/Down Charge:</span> {formatLkr(summary.lorryUpDownCharge ?? 0)}</p>
+                          )}
+                          {(summary.lorryWaitingCharge ?? 0) > 0 && (
+                            <p><span className="font-semibold">5. Waiting Charge:</span> {formatLkr(summary.lorryWaitingCharge ?? 0)}</p>
+                          )}
+                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0) + (summary.lorryHillCharge ?? 0) + (summary.lorryUpDownCharge ?? 0) + (summary.lorryWaitingCharge ?? 0))}</p>
                         </>
                       ) : (
                         <p>Add pickup and destination to calculate the lorry fare.</p>
@@ -1077,9 +1015,26 @@ function getDayPackageCharge(vehicle: VehicleCatalogItem, ac: string, isHillCoun
 }
 
 function LorryRateTable({ rates, selectedKey }: { rates: LorryRates; selectedKey?: string }) {
-  const rows = Object.values(rates).filter((row) =>
-    row.start > 0 || row.extra > 0 || row.upDown > 0 || row.waiting > 0 || row.waitingHour > 0 || row.between100And130 > 0,
-  );
+  const rows: Array<{type: string; fromKm: number; toKm: number; rate: number; extraPerKm: number; hillExtraPerKm: number; upDownNonHill: number; upDownHill: number; freeWaitingHours: number; waitingChargePerHour: number}> = [];
+
+  Object.values(rates).forEach((lorry) => {
+    if (lorry.windows && Array.isArray(lorry.windows)) {
+      lorry.windows.forEach((window) => {
+        rows.push({
+          type: lorry.type || "",
+          fromKm: window.fromKm || 0,
+          toKm: window.toKm || 0,
+          rate: window.rate || 0,
+          extraPerKm: window.extraPerKm || 0,
+          hillExtraPerKm: window.hillExtraPerKm || 0,
+          upDownNonHill: lorry.upDownNonHill || 0,
+          upDownHill: lorry.upDownHill || 0,
+          freeWaitingHours: lorry.freeWaitingHours || 0,
+          waitingChargePerHour: lorry.waitingChargePerHour || 0,
+        });
+      });
+    }
+  });
 
   if (!rows.length) {
     return (
@@ -1091,34 +1046,36 @@ function LorryRateTable({ rates, selectedKey }: { rates: LorryRates; selectedKey
 
   return (
     <div className="overflow-x-auto border border-white/10 bg-white/5">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-white/5 text-[10px] uppercase tracking-wider text-white/50">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-white/5 text-[9px] uppercase tracking-wider text-white/50 font-bold">
           <tr>
-            <th className="px-4 py-2">Type</th>
-            <th className="px-4 py-2">Start</th>
-            <th className="px-4 py-2">Extra</th>
-            <th className="px-4 py-2">Up &amp; Down</th>
-            <th className="px-4 py-2">Waiting</th>
-            <th className="px-4 py-2">Waiting Hour</th>
-            <th className="px-4 py-2">Between 100-130 KM</th>
+            <th className="px-3 py-2 border-b border-white/10">Type</th>
+            <th className="px-3 py-2 border-b border-white/10">From KM</th>
+            <th className="px-3 py-2 border-b border-white/10">To KM</th>
+            <th className="px-3 py-2 border-b border-white/10">Rate</th>
+            <th className="px-3 py-2 border-b border-white/10">Extra/KM</th>
+            <th className="px-3 py-2 border-b border-white/10">Hill Extra/KM</th>
+            <th className="px-3 py-2 border-b border-white/10">UpDown (Normal)</th>
+            <th className="px-3 py-2 border-b border-white/10">UpDown (Hill)</th>
+            <th className="px-3 py-2 border-b border-white/10">Free Wait (h)</th>
+            <th className="px-3 py-2 border-b border-white/10">Wait/Hour</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => {
-            const rowKey = Object.entries(rates).find(([, value]) => value === row)?.[0];
-            const isSelected = rowKey === selectedKey;
-            return (
-            <tr key={row.type} className={`border-t border-white/10 ${isSelected ? "bg-red-500/10" : ""}`}>
-              <td className={`px-4 py-2 font-semibold ${isSelected ? "text-red-300" : "text-white"}`}>{row.type}</td>
-              <td className="px-4 py-2 text-white/80">{formatLkr(row.start)}</td>
-              <td className="px-4 py-2 text-white/80">{formatLkr(row.extra)}</td>
-              <td className="px-4 py-2 text-white/80">{formatLkr(row.upDown)}</td>
-              <td className="px-4 py-2 text-white/80">{formatLkr(row.waiting)}</td>
-              <td className="px-4 py-2 text-white/80">{formatLkr(row.waitingHour)}</td>
-              <td className="px-4 py-2 text-white/80">{formatLkr(row.between100And130)}</td>
+          {rows.map((row, idx) => (
+            <tr key={idx} className="border-b border-white/10 hover:bg-white/5">
+              <td className="px-3 py-2 font-semibold text-white">{row.type}</td>
+              <td className="px-3 py-2 text-white/80">{row.fromKm}</td>
+              <td className="px-3 py-2 text-white/80">{row.toKm}</td>
+              <td className="px-3 py-2 text-white/80 font-medium">{formatLkr(row.rate)}</td>
+              <td className="px-3 py-2 text-white/80">{formatLkr(row.extraPerKm)}</td>
+              <td className="px-3 py-2 text-white/80">{formatLkr(row.hillExtraPerKm)}</td>
+              <td className="px-3 py-2 text-white/80">{formatLkr(row.upDownNonHill)}</td>
+              <td className="px-3 py-2 text-white/80">{formatLkr(row.upDownHill)}</td>
+              <td className="px-3 py-2 text-white/80">{row.freeWaitingHours}</td>
+              <td className="px-3 py-2 text-white/80">{formatLkr(row.waitingChargePerHour)}</td>
             </tr>
-            );
-          })}
+          ))}
         </tbody>
       </table>
     </div>

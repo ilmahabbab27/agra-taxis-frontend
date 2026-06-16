@@ -52,8 +52,10 @@ export type LorryRateWindow = {
 export type LorryRateRow = {
   type: string;
   windows: LorryRateWindow[];
-  extraUpDownCharge: number;
-  waitingChargePerHour: number;
+  upDownNonHill?: number;
+  upDownHill?: number;
+  freeWaitingHours?: number;
+  waitingChargePerHour?: number;
 };
 
 export type LorryRates = Record<string, LorryRateRow>;
@@ -486,6 +488,7 @@ function normalizeLorryRates(raw: unknown): LorryRates {
           toKm: window.toKm === null ? null : (window.toKm ? Math.max(0, Number(window.toKm)) : null),
           rate: Math.max(0, Number(window.rate ?? window.start) || 0),
           extraPerKm: Math.max(0, Number(window.extraPerKm ?? window.extra) || 0),
+          hillExtraPerKm: Math.max(0, Number(window.hillExtraPerKm ?? 0)),
         };
       });
     } else if (data.startRate && typeof data.startRate === "object") {
@@ -493,18 +496,20 @@ function normalizeLorryRates(raw: unknown): LorryRates {
       const sr = data.startRate as Record<string, unknown>;
       const limit = Math.max(0, Number(sr.limit) || 130);
       const rate = Math.max(0, Number(sr.rate) || 0);
-      windows = [{ fromKm: 0, toKm: limit, rate, extraPerKm: Math.max(0, Number(data.extraKmCharge) || 0) }];
+      windows = [{ fromKm: 0, toKm: limit, rate, extraPerKm: Math.max(0, Number(data.extraKmCharge) || 0), hillExtraPerKm: 0 }];
     }
 
     if (windows.length === 0) {
-      windows = [{ fromKm: 0, toKm: 130, rate: 0, extraPerKm: 0 }];
+      windows = [{ fromKm: 0, toKm: 130, rate: 0, extraPerKm: 0, hillExtraPerKm: 0 }];
     }
 
     normalized[key] = {
       type: String(data.type || key),
       windows,
-      extraUpDownCharge: Math.max(0, Number(data.extraUpDownCharge ?? data.upDown ?? data.up_down) || 0),
-      waitingChargePerHour: Math.max(0, Number(data.waitingChargePerHour ?? data.waitingHour ?? data.waiting_hour) || 0),
+      upDownNonHill: Math.max(0, Number(data.upDownNonHill ?? data.extraUpDownCharge ?? data.upDown ?? data.up_down) || 0),
+      upDownHill: Math.max(0, Number(data.upDownHill ?? 0)),
+      freeWaitingHours: Math.max(0, Number(data.freeWaitingHours ?? 0)),
+      waitingChargePerHour: Math.max(0, Number(data.waitingChargePerHour ?? 0)),
     };
     return normalized;
   }, {});

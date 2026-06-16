@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
-import { Car, Download, LogOut, Pencil, Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Car, Download, LogOut, Pencil, Plus, Trash2, Loader2, RotateCw } from "lucide-react";
 import { adminLogout, isAdminAuthed } from "@/lib/admin-store";
 import { API_BASE } from "@/lib/api";
 import { EMAIL, PHONE, PHONE_DISPLAY, WHATSAPP } from "@/lib/contact";
@@ -61,13 +61,13 @@ const emptyPackagePrices: PackagePrices = {
   day1: { ...emptyDayPrices },
 };
 const emptyLorryRates: LorryRates = {
-  "7ft": { type: "7 FT", windows: [{ fromKm: 0, toKm: 130, rate: 2500, extraPerKm: 160 }], extraUpDownCharge: 120, waitingChargePerHour: 600 },
-  "20ft": { type: "20 FT", windows: [{ fromKm: 0, toKm: 130, rate: 18000, extraPerKm: 450 }], extraUpDownCharge: 300, waitingChargePerHour: 1500 },
-  "8.5ft": { type: "8.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 3500, extraPerKm: 180 }], extraUpDownCharge: 130, waitingChargePerHour: 700 },
-  "10.5ft": { type: "10.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 6000, extraPerKm: 230 }], extraUpDownCharge: 170, waitingChargePerHour: 800 },
-  "12.5ft": { type: "12.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 7500, extraPerKm: 250 }], extraUpDownCharge: 180, waitingChargePerHour: 800 },
-  "14.5ft": { type: "14.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 10000, extraPerKm: 320 }], extraUpDownCharge: 210, waitingChargePerHour: 1000 },
-  "16.5ft": { type: "16.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 11000, extraPerKm: 330 }], extraUpDownCharge: 220, waitingChargePerHour: 1000 },
+  "7ft": { type: "7 FT", windows: [{ fromKm: 0, toKm: 130, rate: 2500, extraPerKm: 160, hillExtraPerKm: 10 }], upDownNonHill: 120, upDownHill: 200 },
+  "20ft": { type: "20 FT", windows: [{ fromKm: 0, toKm: 130, rate: 18000, extraPerKm: 450, hillExtraPerKm: 10 }], upDownNonHill: 300, upDownHill: 500 },
+  "8.5ft": { type: "8.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 3500, extraPerKm: 180, hillExtraPerKm: 10 }], upDownNonHill: 130, upDownHill: 220 },
+  "10.5ft": { type: "10.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 6000, extraPerKm: 230, hillExtraPerKm: 10 }], upDownNonHill: 170, upDownHill: 280 },
+  "12.5ft": { type: "12.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 7500, extraPerKm: 250, hillExtraPerKm: 10 }], upDownNonHill: 180, upDownHill: 300 },
+  "14.5ft": { type: "14.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 10000, extraPerKm: 320, hillExtraPerKm: 10 }], upDownNonHill: 210, upDownHill: 350 },
+  "16.5ft": { type: "16.5 FT", windows: [{ fromKm: 0, toKm: 130, rate: 11000, extraPerKm: 330, hillExtraPerKm: 10 }], upDownNonHill: 220, upDownHill: 360 },
 };
 
 const emptyVehicleForm: VehicleFormInput = {
@@ -236,6 +236,23 @@ function printQuotationDraft(form: QuotationForm) {
   popup.document.close();
 }
 
+function AdminField({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <label className="block text-sm font-semibold text-charcoal mb-2">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 function AdminDashboard() {
   const navigate = useNavigate();
   const [adminVehicles, setAdminVehicles] = useState<VehicleCatalogItem[]>([]);
@@ -252,6 +269,7 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>("vehicles");
   const [quotationForm, setQuotationForm] = useState<QuotationForm>(emptyQuotationForm);
   const [lorryRates, setLorryRates] = useState<LorryRates>(emptyLorryRates);
+  const [allLorryRates, setAllLorryRates] = useState<Map<string, LorryRates>>(new Map());
   const [lorryImageForm, setLorryImageForm] = useState<LorryImageForm>({
     img: "/assets/car.jpg",
     img2: undefined,
@@ -267,6 +285,24 @@ function AdminDashboard() {
   const [vehicleSaveError, setVehicleSaveError] = useState("");
   const [vehicleSaving, setVehicleSaving] = useState(false);
   const [currentLorry, setCurrentLorry] = useState<VehicleCatalogItem | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<VehicleFormInput>(emptyVehicleForm);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [savingLorryImages, setSavingLorryImages] = useState(false);
+  const [savingLorryRates, setSavingLorryRates] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+
+  const lorryImageRefs = {
+    img: useRef<HTMLInputElement>(null),
+    img2: useRef<HTMLInputElement>(null),
+    img3: useRef<HTMLInputElement>(null),
+    img4: useRef<HTMLInputElement>(null),
+    img5: useRef<HTMLInputElement>(null),
+  };
+
+  const vehicleImageRefs = {
+    img: useRef<HTMLInputElement>(null),
+    img2: useRef<HTMLInputElement>(null),
+  };
 
   useEffect(() => {
     if (!isAdminAuthed()) {
@@ -277,35 +313,13 @@ function AdminDashboard() {
     setReady(true);
   }, [navigate]);
 
-  async function refreshVehicles() {
-    try {
-      const [vehicles, categories, lorries] = await Promise.all([
-        getVehiclesFromDatabase(),
-        getVehicleCategoriesFromDatabase(),
-        getLorriesFromDatabase(),
-      ]);
-      const byName = new Map<string, VehicleCatalogItem>();
-      [...vehicles, ...lorries].forEach((vehicle) => byName.set(vehicle.name, vehicle));
-      const lorryWithRates = lorries.find((vehicle) => vehicle.lorryRates && Object.keys(vehicle.lorryRates).length);
-      const firstLorry = lorryWithRates ?? lorries[0];
-      setAdminVehicles(Array.from(byName.values()));
-      setCurrentLorry(firstLorry ?? null);
-      setLorryRates(lorryWithRates?.lorryRates ?? emptyLorryRates);
-      if (firstLorry) {
-        setLorryImageForm({
-          img: firstLorry.img,
-          img2: firstLorry.img2,
-          img3: firstLorry.img3,
-          img4: firstLorry.img4,
-          img5: firstLorry.img5,
-        });
-      }
-      setCategoryOptions(categories);
-    } catch {
-      const fallbackVehicles = getVehicles();
-      const firstLorry = fallbackVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
-      setAdminVehicles(fallbackVehicles);
-      if (firstLorry) {
+  // Auto-select first lorry if none selected
+  useEffect(() => {
+    if (!currentLorry && activeTab === "lorries") {
+      const lorries = adminVehicles.filter(v => v.category.toLowerCase().includes("lorry"));
+      if (lorries.length > 0) {
+        const firstLorry = lorries[0];
+        setCurrentLorry(firstLorry);
         setLorryRates(firstLorry.lorryRates ?? emptyLorryRates);
         setLorryImageForm({
           img: firstLorry.img,
@@ -315,7 +329,80 @@ function AdminDashboard() {
           img5: firstLorry.img5,
         });
       }
+    }
+  }, [activeTab, adminVehicles, currentLorry]);
+
+  async function refreshVehicles() {
+    setLoadingVehicles(true);
+    try {
+      const [vehicles, categories, lorries] = await Promise.all([
+        getVehiclesFromDatabase(),
+        getVehicleCategoriesFromDatabase(),
+        getLorriesFromDatabase(),
+      ]);
+      setLoadingVehicles(false);
+      const byName = new Map<string, VehicleCatalogItem>();
+      [...vehicles, ...lorries].forEach((vehicle) => byName.set(vehicle.name, vehicle));
+
+      // Set adminVehicles with ALL vehicles (passenger + lorries)
+      const allVehicles = Array.from(byName.values());
+      setAdminVehicles(allVehicles);
+
+      // Load consolidated lorry rates from "Agra Lorries" (all types in one JSON)
+      const agraLorries = lorries.find((v) => v.name === "Agra Lorries");
+      const allRates = new Map<string, LorryRates>();
+      if (agraLorries?.lorryRates && Object.keys(agraLorries.lorryRates).length > 0) {
+        allRates.set("Agra Lorries", agraLorries.lorryRates);
+      }
+      setAllLorryRates(allRates);
+
+      // Always prioritize "Agra Lorries" (consolidated vehicle from database)
+      let nextLorry: VehicleCatalogItem | undefined = lorries.find((v) => v.name === "Agra Lorries");
+      if (!nextLorry) {
+        nextLorry = currentLorry ? allVehicles.find(v => v.name === currentLorry.name) : undefined;
+      }
+      if (!nextLorry) {
+        nextLorry = lorries.find((vehicle) => vehicle.lorryRates && Object.keys(vehicle.lorryRates).length);
+      }
+      if (!nextLorry) {
+        nextLorry = lorries[0];
+      }
+
+      setCurrentLorry(nextLorry);
+      // Use only database rates, no fallback defaults
+      if (nextLorry?.lorryRates && Object.keys(nextLorry.lorryRates).length > 0) {
+        setLorryRates(nextLorry.lorryRates);
+      } else {
+        setLorryRates({});
+      }
+      if (nextLorry) {
+        setLorryImageForm({
+          img: nextLorry.img,
+          img2: nextLorry.img2,
+          img3: nextLorry.img3,
+          img4: nextLorry.img4,
+          img5: nextLorry.img5,
+        });
+      }
+      setCategoryOptions(categories);
+    } catch {
+      const fallbackVehicles = getVehicles();
+      setAdminVehicles(fallbackVehicles);
+      const firstLorry = fallbackVehicles.find((vehicle) => vehicle.name === "Agra Lorries")
+        ?? fallbackVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+      if (firstLorry) {
+        setCurrentLorry(firstLorry);
+        setLorryRates(firstLorry.lorryRates && Object.keys(firstLorry.lorryRates).length > 0 ? firstLorry.lorryRates : {});
+        setLorryImageForm({
+          img: firstLorry.img,
+          img2: firstLorry.img2,
+          img3: firstLorry.img3,
+          img4: firstLorry.img4,
+          img5: firstLorry.img5,
+        });
+      }
       setCategoryOptions(getVehicleCategories());
+      setLoadingVehicles(false);
     }
   }
 
@@ -443,6 +530,65 @@ function AdminDashboard() {
     ) as LorryRates);
   }
 
+  function InvoicePreview({ form }: { form: QuotationForm }) {
+    const chargeRows: Array<{ label: string; amount: string }> = [
+      { label: `For First ${form.firstKms || "—"} Kms`, amount: form.amount },
+      { label: `Extra Additional ${form.extraKms || "—"} Kms`, amount: "" },
+      ...(form.packageHours ? [{ label: `${form.packageHours} Hrs Package With ${form.packageWith || "—"}`, amount: "" }] : []),
+      ...(form.extraHours ? [{ label: `Extra Additional ${form.extraHours} Hrs`, amount: "" }] : []),
+      ...(form.loadingCharges ? [{ label: "Loading Charges", amount: form.loadingCharges }] : []),
+      ...(form.pickupCharges ? [{ label: "Pickup Charges", amount: form.pickupCharges }] : []),
+    ];
+
+    return (
+      <div className="border border-border rounded-lg p-6 bg-charcoal h-full flex flex-col overflow-hidden">
+        <div className="flex-1 overflow-y-auto">
+          <div className="mb-4 pb-3 border-b border-white/20">
+            <h3 className="text-base font-bold text-white">{form.documentType}</h3>
+            <p className="text-xs text-white/70">Date: {form.date || "—"} | Vehicle: {form.vehicleNo || "—"} | Cab: {form.cabNo || "—"}</p>
+          </div>
+
+          <div className="space-y-2 text-xs mb-4">
+            <div><span className="text-white/60">Customer:</span> <span className="text-white font-semibold">{form.customerName || "—"}</span></div>
+            <div><span className="text-white/60">Description:</span> <span className="text-white">{form.description || form.vehicle || "—"}</span></div>
+            <div><span className="text-white/60">No. Of Kms:</span> <span className="text-white font-semibold">{form.noOfKms || form.days || "—"}</span></div>
+            {form.meterReadingStart && <div><span className="text-white/60">Meter Start:</span> <span className="text-white">{form.meterReadingStart}</span></div>}
+            {form.meterReadingEnd && <div><span className="text-white/60">Meter End:</span> <span className="text-white">{form.meterReadingEnd}</span></div>}
+          </div>
+
+          <div className="border border-white/20 rounded mb-4 overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-charcoal/80 border-b border-white/20">
+                  <th className="px-2 py-2 text-left text-white">Description</th>
+                  <th className="px-2 py-2 text-right text-white">Rate</th>
+                  <th className="px-2 py-2 text-right text-white">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chargeRows.map((row, i) => (
+                  <tr key={i} className="border-t border-white/10">
+                    <td className="px-2 py-2 text-white">{row.label}</td>
+                    <td className="px-2 py-2 text-right text-white">{form.rate ? `Rs. ${form.rate}` : "—"}</td>
+                    <td className="px-2 py-2 text-right text-white font-semibold">{row.amount ? `Rs. ${row.amount}` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-auto pt-4 border-t border-gold">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-white font-semibold">TOTAL AMOUNT</span>
+            <span className="text-lg font-bold text-gold">{form.amount ? `Rs. ${form.amount}` : "—"}</span>
+          </div>
+          {form.notes && <p className="text-xs text-white/70 italic">{form.notes}</p>}
+        </div>
+      </div>
+    );
+  }
+
   function addLorryWindow(key: string) {
     setLorryRates((current) => {
       const row = current[key];
@@ -483,32 +629,65 @@ function AdminDashboard() {
     setLorryImageForm((current) => ({ ...current, [key]: value }));
   }
 
-  async function saveLorryRates() {
-    setLorrySaveStatus("Saving...");
-    const lorryVehicle: VehicleFormInput = {
-      ...(currentLorry ?? emptyVehicleForm),
-      name: currentLorry?.name || "Agra Lorry",
-      category: currentLorry?.category || "Lorries",
-      img: lorryImageForm.img || currentLorry?.img || "/assets/car.jpg",
-      img2: lorryImageForm.img2,
-      img3: lorryImageForm.img3,
-      img4: lorryImageForm.img4,
-      img5: lorryImageForm.img5,
-      seats: currentLorry?.seats || 2,
-      acAvailable: currentLorry?.acAvailable ?? true,
-      nonAcAvailable: currentLorry?.nonAcAvailable ?? true,
-      lorryRates,
-    };
+  async function saveLorryImages(imageData: LorryImageForm) {
+    if (!currentLorry || !currentLorry.id) return;
+    setSavingLorryImages(true);
     try {
-      await saveLorryToDatabase(lorryVehicle, currentLorry?.id);
+      const payload: VehicleFormInput = {
+        ...currentLorry,
+        ...imageData,
+      };
+      await saveLorryToDatabase(payload, currentLorry.id);
+      alert("Lorry images saved successfully!");
+      void refreshVehicles();
+    } catch (e) {
+      console.error("Save error:", e);
+      alert("Failed to save lorry images");
+    } finally {
+      setSavingLorryImages(false);
+    }
+  }
+
+  async function saveLorryRates() {
+    setSavingLorryRates(true);
+    setLorrySaveStatus("Saving all lorries...");
+    try {
+      // Save all lorries
+      for (const [lorryName, rates] of allLorryRates.entries()) {
+        const lorry = adminVehicles.find(v => v.name === lorryName);
+        if (!lorry) continue;
+
+        const lorryVehicle: VehicleFormInput = {
+          ...lorry,
+          lorryRates: rates,
+        };
+        await saveLorryToDatabase(lorryVehicle, lorry.id);
+      }
       await refreshVehicles();
-      setLorrySaveStatus("Saved");
+      setLorrySaveStatus("All lorries saved ✓");
       setIsLorryEditing(false);
-    } catch {
-      saveCustomVehicle(lorryVehicle);
+    } catch (e) {
+      console.error("Save error:", e);
+      setLorrySaveStatus("Error saving lorries");
+      setIsLorryEditing(false);
+    } finally {
+      setSavingLorryRates(false);
+    }
+  }
+
+  async function saveVehicleChanges() {
+    if (!editingVehicle.name.trim()) return;
+    setVehicleSaving(true);
+    setVehicleSaveError("");
+    try {
+      const existingVehicle = adminVehicles.find((v) => v.name === editingVehicleName);
+      await saveVehicleToDatabase(editingVehicle, existingVehicle?.id);
       await refreshVehicles();
-      setLorrySaveStatus("Saved locally");
-      setIsLorryEditing(false);
+      closeVehicleDialog();
+    } catch (error) {
+      setVehicleSaveError(error instanceof Error ? error.message : "Could not save vehicle.");
+    } finally {
+      setVehicleSaving(false);
     }
   }
 
@@ -586,19 +765,22 @@ function AdminDashboard() {
     event.preventDefault();
     const category = newCategory.trim();
     if (!category) return;
+    setSavingCategory(true);
     try {
       await saveCategoryToDatabase(category);
     } catch {
       saveCustomCategory(category);
+    } finally {
+      setSavingCategory(false);
+      setNewCategory("");
+      setVehicleForm((current) => ({ ...current, category }));
+      await refreshVehicles();
     }
-    setNewCategory("");
-    setVehicleForm((current) => ({ ...current, category }));
-    await refreshVehicles();
   }
 
   function editVehicle(vehicle: VehicleCatalogItem) {
     setEditingVehicleName(vehicle.name);
-    setVehicleForm({
+    const vehicleData = {
       name: vehicle.name,
       category: vehicle.category,
       img: vehicle.img,
@@ -612,12 +794,15 @@ function AdminDashboard() {
       acAvailable: vehicle.acAvailable,
       nonAcAvailable: vehicle.nonAcAvailable,
       package1Prices: vehicle.package1Prices ?? { ...emptyPackagePrices },
-    });
+    };
+    setVehicleForm(vehicleData);
+    setEditingVehicle(vehicleData);
     setIsVehicleDialogOpen(true);
   }
 
   function resetVehicleForm() {
     setVehicleForm(emptyVehicleForm);
+    setEditingVehicle(emptyVehicleForm);
     setEditingVehicleName(null);
     setVehicleSaveError("");
   }
@@ -798,15 +983,36 @@ function AdminDashboard() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void refreshVehicles()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[#f4f5f7] px-3 py-2 text-sm font-semibold text-charcoal hover:bg-accent transition-colors"
+              >
+                <RotateCw className="h-3.5 w-3.5" /> Refresh
+              </button>
               <form onSubmit={onCategorySubmit} className="flex gap-2">
                 <input
                   value={newCategory}
                   onChange={(event) => setNewCategory(event.target.value)}
                   placeholder="New category..."
-                  className="w-36 rounded-lg border border-border bg-[#f0f2f5] px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20"
+                  disabled={savingCategory}
+                  className="w-36 rounded-lg border border-border bg-[#f0f2f5] px-3 py-2 text-sm text-charcoal outline-none transition-all focus:border-gold/40 focus:ring-1 focus:ring-gold/20 disabled:opacity-60"
                 />
-                <button type="submit" className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[#f4f5f7] px-3 py-2 text-sm font-semibold text-charcoal hover:bg-accent transition-colors">
-                  <Plus className="h-3.5 w-3.5" /> Category
+                <button
+                  type="submit"
+                  disabled={savingCategory}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[#f4f5f7] px-3 py-2 text-sm font-semibold text-charcoal hover:bg-accent transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {savingCategory ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-3.5 w-3.5" /> Category
+                    </>
+                  )}
                 </button>
               </form>
               <button
@@ -854,6 +1060,13 @@ function AdminDashboard() {
 
           {/* Vehicle grid */}
           <div className="p-5">
+            {loadingVehicles && (
+              <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="mb-3 h-8 w-8 animate-spin text-charcoal" />
+                <p className="text-sm font-medium text-muted-foreground">Loading vehicles...</p>
+              </div>
+            )}
+            {!loadingVehicles && (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visibleFleetItems.map((vehicle) => (
                 <div key={vehicle.name} className="group overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card">
@@ -908,8 +1121,9 @@ function AdminDashboard() {
                 </div>
               ))}
             </div>
+            )}
 
-            {visibleFleetItems.length === 0 && (
+            {!loadingVehicles && visibleFleetItems.length === 0 && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="mb-4 rounded-full border border-border bg-[#f8f9fb] p-5">
                   <Car className="h-8 w-8 text-muted-foreground/40" />
@@ -937,54 +1151,288 @@ function AdminDashboard() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h2 className="text-base font-bold text-charcoal">Lorry Rates</h2>
-                  <p className="text-xs text-muted-foreground">Vehicle-specific rate table. Add one row per lorry type.</p>
+                  <p className="text-xs text-muted-foreground">All 9 lorries with 5 fare components: base, extra km, hill, up/down, and waiting. Multiple distance windows per type.</p>
                 </div>
-                {!isLorryEditing && (
+                <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsLorryEditing(true);
-                      setLorrySaveStatus("");
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    onClick={() => void refreshVehicles()}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[#f4f5f7] px-3 py-2 text-sm font-semibold text-charcoal hover:bg-accent transition-colors"
                   >
-                    <Pencil className="h-4 w-4" /> Edit
+                    <RotateCw className="h-3.5 w-3.5" /> Refresh
                   </button>
-                )}
+                  {!isLorryEditing && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLorryEditing(true);
+                        setLorrySaveStatus("");
+                      }}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+                    >
+                      <Pencil className="h-4 w-4" /> Edit
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             <div className="p-5">
-              <div className="mb-5 rounded-xl border border-border bg-[#f8f9fb] p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Lorry Images</p>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                  {([
-                    ["img", "Primary image"],
-                    ["img2", "Second image"],
-                    ["img3", "Third image"],
-                    ["img4", "Fourth image"],
-                    ["img5", "Fifth image"],
-                  ] as Array<[ImageSlot, string]>).map(([slot, label]) => (
-                    <VehicleImageInput
-                      key={slot}
-                      label={label}
-                      image={lorryImageForm[slot]}
-                      alt={`Lorry ${label.toLowerCase()}`}
-                      uploading={lorryImageUploading === slot}
-                      disabled={!isLorryEditing || Boolean(lorryImageUploading)}
-                      onUpload={(file) => onLorryImageUpload(file, slot)}
-                      onDelete={() => setLorryImageForm((prev) => ({ ...prev, [slot]: undefined }))}
-                    />
-                  ))}
-                </div>
+              <div className="overflow-x-auto border border-border">
+                <table className="w-full text-left text-sm bg-white">
+                  <thead className="bg-charcoal text-[10px] uppercase tracking-wider text-white">
+                    <tr>
+                      <th className="px-4 py-2 font-semibold">Lorry Type</th>
+                      <th className="px-4 py-2 font-semibold">From KM</th>
+                      <th className="px-4 py-2 font-semibold">To KM</th>
+                      <th className="px-4 py-2 font-semibold">Rate</th>
+                      <th className="px-4 py-2 font-semibold">Extra/KM</th>
+                      <th className="px-4 py-2 font-semibold">Hill Extra/KM</th>
+                      <th className="px-4 py-2 font-semibold">UpDown (Normal)</th>
+                      <th className="px-4 py-2 font-semibold">UpDown (Hill)</th>
+                      <th className="px-4 py-2 font-semibold">Free Wait (h)</th>
+                      <th className="px-4 py-2 font-semibold">Wait/Hour</th>
+                      <th className="px-4 py-2 font-semibold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from(allLorryRates.entries()).flatMap(([lorryName, rates]) => {
+                      // Iterate through ALL lorry types in the consolidated JSON
+                      return Object.entries(rates).flatMap(([rateKey, rateData]) => {
+                        if (!rateData) return [];
+
+                        const windows = rateData.windows || [];
+
+                        if (windows.length === 0) {
+                          return (
+                            <tr key={`${lorryName}-${rateKey}`} className="border-t border-border hover:bg-gray-50">
+                              <td className="px-4 py-2 font-semibold text-charcoal">{rateData.type || rateKey}</td>
+                              <td colSpan={9} className="px-4 py-2 text-center text-charcoal/50">No distance windows configured</td>
+                            </tr>
+                          );
+                        }
+
+                        return windows.map((window, windowIdx) => (
+                        <tr key={`${rateKey}-${windowIdx}`} className="border-t border-border hover:bg-gray-50">
+                                {windowIdx === 0 && (
+                                  <td rowSpan={windows.length} className="px-4 py-2 font-semibold text-charcoal">{rateData.type || rateKey}</td>
+                                )}
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={window.fromKm || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].windows[windowIdx].fromKm = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    window.fromKm || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={window.toKm || 130}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].windows[windowIdx].toKm = e.target.value ? Number(e.target.value) : null;
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    window.toKm || 130
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={window.rate || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].windows[windowIdx].rate = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    window.rate || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={window.extraPerKm || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].windows[windowIdx].extraPerKm = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    window.extraPerKm || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={window.hillExtraPerKm || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].windows[windowIdx].hillExtraPerKm = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    window.hillExtraPerKm || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={rateData.upDownNonHill || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].upDownNonHill = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    rateData.upDownNonHill || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={rateData.upDownHill || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].upDownHill = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    rateData.upDownHill || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={rateData.freeWaitingHours || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].freeWaitingHours = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    rateData.freeWaitingHours || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing ? (
+                                    <input
+                                      type="number"
+                                      value={rateData.waitingChargePerHour || 0}
+                                      onChange={(e) => {
+                                        const updated = new Map(allLorryRates);
+                                        const rate = updated.get(lorryName);
+                                        if (rate && rate[rateKey]) {
+                                          rate[rateKey].waitingChargePerHour = Number(e.target.value);
+                                        }
+                                        setAllLorryRates(updated);
+                                      }}
+                                      className="w-20 rounded border border-border bg-white px-2 py-1 text-charcoal outline-none"
+                                    />
+                                  ) : (
+                                    rateData.waitingChargePerHour || 0
+                                  )}
+                                </td>
+                                <td className="px-4 py-2 text-charcoal">
+                                  {isLorryEditing && (
+                                    <div className="flex gap-2">
+                                      {windowIdx === windows.length - 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const updated = new Map(allLorryRates);
+                                            const rate = updated.get(lorryName);
+                                            if (rate && rate[rateKey]) {
+                                              if (!rate[rateKey].windows) rate[rateKey].windows = [];
+                                              rate[rateKey].windows.push({ fromKm: 0, toKm: 130, rate: 0, extraPerKm: 0, hillExtraPerKm: 0 });
+                                            }
+                                            setAllLorryRates(updated);
+                                          }}
+                                          className="text-xs rounded bg-charcoal text-white px-2 py-1 hover:opacity-90"
+                                        >
+                                          Add
+                                        </button>
+                                      )}
+                                      {windows.length > 1 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const updated = new Map(allLorryRates);
+                                            const rate = updated.get(lorryName);
+                                            if (rate && rate[rateKey]) {
+                                              rate[rateKey].windows?.splice(windowIdx, 1);
+                                            }
+                                            setAllLorryRates(updated);
+                                          }}
+                                          className="text-xs rounded bg-red-600 text-white px-2 py-1 hover:opacity-90"
+                                        >
+                                          Remove
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ));
+                      });
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <LorryRateEditorTable
-                rates={lorryRates}
-                onChange={updateLorryRate}
-                onChangeAll={updateAllLorryRates}
-                onAddWindow={addLorryWindow}
-                onRemoveWindow={removeLorryWindow}
-                disabled={!isLorryEditing}
-              />
               <div className="mt-4 flex items-center justify-end gap-3">
                 {lorrySaveStatus && <p className="text-xs font-medium text-muted-foreground">{lorrySaveStatus}</p>}
                 {isLorryEditing && (
@@ -1002,13 +1450,80 @@ function AdminDashboard() {
                 )}
                 <button
                   type="button"
-                  disabled={!isLorryEditing}
+                  disabled={!isLorryEditing || savingLorryRates}
                   onClick={() => void saveLorryRates()}
-                  className="rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 transition-opacity inline-flex items-center gap-2"
                 >
-                  Save Lorry Rates
+                  {savingLorryRates ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Lorry Rates"
+                  )}
                 </button>
               </div>
+            </div>
+
+            {/* Lorry Images Section */}
+            <div className="border-t border-border px-5 py-6">
+              <h3 className="mb-4 text-base font-bold text-charcoal">Lorry Images</h3>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+                {(Object.keys(lorryImageForm) as ImageSlot[]).map((key) => (
+                  <div key={key} className="flex flex-col gap-2">
+                    <label className="text-xs font-semibold text-charcoal uppercase">{key}</label>
+                    <div className="relative overflow-hidden rounded-lg border-2 border-dashed border-border bg-gray-50 h-32 flex items-center justify-center group">
+                      {lorryImageForm[key] && (
+                        <>
+                          <img src={lorryImageForm[key]} alt={key} className="h-32 w-full object-cover absolute inset-0" />
+                          <button
+                            type="button"
+                            onClick={() => updateLorryImageForm(key, key === "img" ? "/assets/car.jpg" : undefined)}
+                            className="absolute top-1 right-1 z-20 rounded-full bg-red-500 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
+                            title="Delete image"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      {!lorryImageForm[key] && (
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => onLorryImageUpload(e.target.files?.[0], key)}
+                          className="relative z-10 cursor-pointer px-4 py-2 text-sm"
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!currentLorry) return;
+                  const imageData = {
+                    img: lorryImageForm.img,
+                    img2: lorryImageForm.img2,
+                    img3: lorryImageForm.img3,
+                    img4: lorryImageForm.img4,
+                    img5: lorryImageForm.img5,
+                  };
+                  void saveLorryImages(imageData);
+                }}
+                disabled={savingLorryImages}
+                className="mt-4 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity inline-flex items-center gap-2"
+              >
+                {savingLorryImages ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Lorry Images"
+                )}
+              </button>
             </div>
           </section>
         )}
@@ -1016,8 +1531,19 @@ function AdminDashboard() {
         {activeTab === "invoices" && (
           <section className="overflow-hidden rounded-2xl border border-border bg-white shadow-soft">
             <div className="border-b border-border px-5 py-4">
-              <h2 className="text-base font-bold text-charcoal">Invoices / Quotations</h2>
-              <p className="text-xs text-muted-foreground">Fill the blanks and download a printable PDF. Nothing is saved.</p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-charcoal">Invoices / Quotations</h2>
+                  <p className="text-xs text-muted-foreground">Fill the blanks and download a printable PDF. Nothing is saved.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void refreshVehicles()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-[#f4f5f7] px-3 py-2 text-sm font-semibold text-charcoal hover:bg-accent transition-colors"
+                >
+                  <RotateCw className="h-3.5 w-3.5" /> Refresh
+                </button>
+              </div>
             </div>
             <div className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)] lg:p-6">
               <form onSubmit={onQuotationSubmit} className="grid gap-5 sm:grid-cols-2">
@@ -1067,689 +1593,303 @@ function AdminDashboard() {
               <DialogTitle className="text-lg font-bold text-charcoal">
                 {editingVehicleName ? "Update Vehicle" : "Add New Vehicle"}
               </DialogTitle>
-              <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
-                {editingVehicleName ? `Editing ${editingVehicleName}` : "Fill in the details below to add a vehicle to the fleet."}
-              </DialogDescription>
+              <DialogDescription className="mt-0.5 text-sm text-muted-foreground"></DialogDescription>
             </div>
-            <form onSubmit={onVehicleSubmit} className="grid gap-5 p-6 sm:grid-cols-2">
-              <AdminField label="Vehicle Name" className="sm:col-span-2">
+
+            {/* Dialog form */}
+            <div className="grid gap-4 overflow-y-auto p-6">
+              <AdminField label="Name">
                 <input
-                  required
-                  value={vehicleForm.name}
-                  onChange={(event) => updateVehicleForm("name", event.target.value)}
-                  placeholder="e.g. Toyota Prius"
+                  autoFocus
+                  value={editingVehicle.name}
+                  onChange={(event) => setEditingVehicle({ ...editingVehicle, name: event.target.value })}
+                  placeholder="e.g., Agra Taxis Swift"
                   className={adminInputClass}
                 />
               </AdminField>
               <AdminField label="Category">
                 <select
-                  value={vehicleForm.category}
-                  onChange={(event) => updateVehicleForm("category", event.target.value)}
+                  value={editingVehicle.category}
+                  onChange={(event) => setEditingVehicle({ ...editingVehicle, category: event.target.value })}
                   className={adminInputClass}
                 >
-                  {categoryOptions
-                    .filter((category) => category !== "All")
-                    .map((category) => (
-                      <option key={category} value={category}>{category}</option>
-                    ))}
+                  <option value="Sedans">Sedans</option>
+                  <option value="Lorries">Lorries</option>
+                  <option value="Mini Bus">Mini Bus</option>
                 </select>
               </AdminField>
               <AdminField label="Seats">
                 <input
-                  required
                   type="number"
                   min={1}
-                  value={vehicleForm.seats}
-                  onChange={(event) => updateVehicleForm("seats", Number(event.target.value))}
+                  value={editingVehicle.seats}
+                  onChange={(event) => setEditingVehicle({ ...editingVehicle, seats: Number(event.target.value) || 1 })}
                   className={adminInputClass}
                 />
               </AdminField>
-
-              {/* Image section */}
-              <div className="sm:col-span-2 rounded-xl border border-border bg-[#f8f9fb] p-4">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Vehicle Images</p>
+              <AdminField label="AC Available">
+                <input
+                  type="checkbox"
+                  checked={editingVehicle.acAvailable}
+                  onChange={(event) => setEditingVehicle({ ...editingVehicle, acAvailable: event.target.checked })}
+                  className="h-4 w-4 rounded border-border"
+                />
+              </AdminField>
+              <AdminField label="Non-AC Available">
+                <input
+                  type="checkbox"
+                  checked={editingVehicle.nonAcAvailable}
+                  onChange={(event) => setEditingVehicle({ ...editingVehicle, nonAcAvailable: event.target.checked })}
+                  className="h-4 w-4 rounded border-border"
+                />
+              </AdminField>
+              {editingVehicle.acAvailable && (
+              <div className="border-t pt-4">
+                <h4 className="mb-4 font-semibold text-charcoal">Pricing - AC (8 Tiers)</h4>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <VehicleImageInput
-                    label="Primary image"
-                    image={vehicleForm.img}
-                    alt={vehicleForm.name || "Primary vehicle preview"}
-                    uploading={imageUploading === "img"}
-                    disabled={Boolean(imageUploading)}
-                    onUpload={(file) => onVehicleImageUpload(file, "img")}
-                    onDelete={() => updateVehicleForm("img", "")}
-                  />
-                  <VehicleImageInput
-                    label="Second image"
-                    image={vehicleForm.img2}
-                    alt={vehicleForm.name || "Second vehicle preview"}
-                    uploading={imageUploading === "img2"}
-                    disabled={Boolean(imageUploading)}
-                    onUpload={(file) => onVehicleImageUpload(file, "img2")}
-                    onDelete={() => updateVehicleForm("img2", undefined)}
-                  />
+                  <AdminField label="AC OneWay Normal">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.ac?.oneWay?.normal ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, ac: { ...prev.perKmPrices.ac, oneWay: { normal: val, hill: prev.perKmPrices.ac.oneWay.hill } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="AC OneWay Hill">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.ac?.oneWay?.hill ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, ac: { ...prev.perKmPrices.ac, oneWay: { normal: prev.perKmPrices.ac.oneWay.normal, hill: val } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="AC RoundTrip Normal">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.ac?.roundTrip?.normal ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, ac: { ...prev.perKmPrices.ac, roundTrip: { normal: val, hill: prev.perKmPrices.ac.roundTrip.hill } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="AC RoundTrip Hill">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.ac?.roundTrip?.hill ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, ac: { ...prev.perKmPrices.ac, roundTrip: { normal: prev.perKmPrices.ac.roundTrip.normal, hill: val } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
                 </div>
               </div>
-              <div className="grid gap-3 rounded-xl border border-border p-3">
-                <label className="inline-flex items-center gap-2 text-sm font-semibold text-charcoal">
-                  <input
-                    type="checkbox"
-                    checked={vehicleForm.acAvailable}
-                    onChange={(event) => updateVehicleForm("acAvailable", event.target.checked)}
-                  />
-                  AC available
-                </label>
-                <AdminField label="AC one-way normal charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.acAvailable}
-                    value={vehicleForm.acPricePerKm}
-                    onChange={(event) =>
-                      updateVehicleForm("acPricePerKm", Number(event.target.value))
-                    }
-                    className={adminInputClass}
-                  />
-                </AdminField>
-                <AdminField label="AC hill country charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.acAvailable}
-                    value={vehicleForm.acHillPricePerKm}
-                    onChange={(event) =>
-                      updateVehicleForm("acHillPricePerKm", Number(event.target.value))
-                    }
-                    className={adminInputClass}
-                  />
-                </AdminField>
-                <AdminField label="AC round-trip normal charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.acAvailable}
-                    value={vehicleForm.perKmPrices?.ac.roundTrip.normal ?? 0}
-                    onChange={(event) => updatePerKmPrice("ac", "roundTrip", "normal", Number(event.target.value))}
-                    className={adminInputClass}
-                  />
-                </AdminField>
-                <AdminField label="AC round-trip hill charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.acAvailable}
-                    value={vehicleForm.perKmPrices?.ac.roundTrip.hill ?? 0}
-                    onChange={(event) => updatePerKmPrice("ac", "roundTrip", "hill", Number(event.target.value))}
-                    className={adminInputClass}
-                  />
-                </AdminField>
+              )}
+
+              {editingVehicle.nonAcAvailable && (
+              <div className="border-t pt-4">
+                <h4 className="mb-4 font-semibold text-charcoal">Pricing - Non-AC (8 Tiers)</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AdminField label="Non-AC OneWay Normal">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.nonAc?.oneWay?.normal ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, nonAc: { ...prev.perKmPrices.nonAc, oneWay: { normal: val, hill: prev.perKmPrices.nonAc.oneWay.hill } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Non-AC OneWay Hill">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.nonAc?.oneWay?.hill ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, nonAc: { ...prev.perKmPrices.nonAc, oneWay: { normal: prev.perKmPrices.nonAc.oneWay.normal, hill: val } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Non-AC RoundTrip Normal">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.nonAc?.roundTrip?.normal ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, nonAc: { ...prev.perKmPrices.nonAc, roundTrip: { normal: val, hill: prev.perKmPrices.nonAc.roundTrip.hill } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Non-AC RoundTrip Hill">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.perKmPrices?.nonAc?.roundTrip?.hill ?? 0}
+                      onChange={(event) => {
+                        const val = Number(event.target.value) || 0;
+                        setEditingVehicle(prev => ({
+                          ...prev,
+                          perKmPrices: { ...prev.perKmPrices, nonAc: { ...prev.perKmPrices.nonAc, roundTrip: { normal: prev.perKmPrices.nonAc.roundTrip.normal, hill: val } } }
+                        }));
+                      }}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                </div>
               </div>
-              <div className="grid gap-3 rounded-xl border border-border p-3">
-                <label className="inline-flex items-center gap-2 text-sm font-semibold text-charcoal">
-                  <input
-                    type="checkbox"
-                    checked={vehicleForm.nonAcAvailable}
-                    onChange={(event) => updateVehicleForm("nonAcAvailable", event.target.checked)}
-                  />
-                  Non AC available
-                </label>
-                <AdminField label="Non AC one-way normal charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.nonAcAvailable}
-                    value={vehicleForm.nonAcPricePerKm}
-                    onChange={(event) =>
-                      updateVehicleForm("nonAcPricePerKm", Number(event.target.value))
-                    }
-                    className={adminInputClass}
-                  />
-                </AdminField>
-                <AdminField label="Non AC hill country charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.nonAcAvailable}
-                    value={vehicleForm.nonAcHillPricePerKm}
-                    onChange={(event) =>
-                      updateVehicleForm("nonAcHillPricePerKm", Number(event.target.value))
-                    }
-                    className={adminInputClass}
-                  />
-                </AdminField>
-                <AdminField label="Non AC round-trip normal charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.nonAcAvailable}
-                    value={vehicleForm.perKmPrices?.nonAc.roundTrip.normal ?? 0}
-                    onChange={(event) => updatePerKmPrice("nonAc", "roundTrip", "normal", Number(event.target.value))}
-                    className={adminInputClass}
-                  />
-                </AdminField>
-                <AdminField label="Non AC round-trip hill charge per km">
-                  <input
-                    type="number"
-                    min={0}
-                    disabled={!vehicleForm.nonAcAvailable}
-                    value={vehicleForm.perKmPrices?.nonAc.roundTrip.hill ?? 0}
-                    onChange={(event) => updatePerKmPrice("nonAc", "roundTrip", "hill", Number(event.target.value))}
-                    className={adminInputClass}
-                  />
-                </AdminField>
+              )}
+
+              <div className="border-t pt-4">
+                <h4 className="mb-4 font-semibold text-charcoal">Package Day Prices</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {["day1", "day2", "day3", "day4", "day5"].map((day) => (
+                    <AdminField key={day} label={`Day ${day.replace("day", "")} Normal`}>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={editingVehicle.package1Prices?.[day as keyof typeof editingVehicle.package1Prices]?.acNormal ?? 0}
+                        onChange={(event) => {
+                          const val = Number(event.target.value) || 0;
+                          setEditingVehicle(prev => ({
+                            ...prev,
+                            package1Prices: {
+                              ...prev.package1Prices,
+                              [day]: {
+                                ...(prev.package1Prices?.[day as keyof typeof prev.package1Prices] || { acNormal: 0, acHill: 0, nonAcNormal: 0, nonAcHill: 0 }),
+                                acNormal: val
+                              }
+                            }
+                          }));
+                        }}
+                        className={adminInputClass}
+                      />
+                    </AdminField>
+                  ))}
+                </div>
               </div>
 
-              <PackagePriceTable
-                title="Package 1"
-                kmLimit={150}
-                prices={vehicleForm.package1Prices ?? emptyPackagePrices}
-                acAvailable={vehicleForm.acAvailable}
-                nonAcAvailable={vehicleForm.nonAcAvailable}
-                onAddDay={addPackageDay}
-                onRemoveDay={removePackageDay}
-                onChange={updatePackagePrice}
-              />
-              {vehicleSaveError && (
-                <div className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-                  {vehicleSaveError}
+              <AdminField label="Images (Upload)">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(["img", "img2"] as const).map((key) => (
+                    <div key={key} className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-charcoal uppercase">{key}</label>
+                      <div className="relative overflow-hidden rounded-lg border-2 border-dashed border-border bg-gray-50 h-24 flex items-center justify-center group">
+                        {editingVehicle[key] && (
+                          <>
+                            <img src={editingVehicle[key]} alt={key} className="h-24 w-full object-cover absolute inset-0" />
+                            <button
+                              type="button"
+                              onClick={() => setEditingVehicle({ ...editingVehicle, [key]: "" })}
+                              className="absolute top-1 right-1 z-20 rounded-full bg-red-500 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
+                              title="Delete image"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                        {!editingVehicle[key] && (
+                          <input
+                            ref={vehicleImageRefs[key]}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file || !file.type.startsWith("image/")) return;
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                if (typeof reader.result === "string") {
+                                  setEditingVehicle({ ...editingVehicle, [key]: reader.result });
+                                }
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="relative z-10 cursor-pointer px-4 py-2 text-sm"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )}
-              <DialogFooter className="sm:col-span-2">
-                <button
-                  type="button"
-                  onClick={closeVehicleDialog}
-                  className="inline-flex items-center justify-center rounded-xl bg-secondary px-4 py-3 text-sm font-semibold text-charcoal hover:bg-accent"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={vehicleSaving}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-                >
-                  {vehicleSaving ? (
-                    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
-                    </svg>
-                  ) : editingVehicleName ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                  {vehicleSaving ? "Saving…" : editingVehicleName ? "Update Vehicle" : "Add Vehicle"}
-                </button>
-              </DialogFooter>
-            </form>
+              </AdminField>
+            </div>
+
+            {/* Dialog footer */}
+            <div className="border-t border-border px-6 py-4 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeVehicleDialog}
+                className="rounded-xl border border-border px-4 py-3 text-sm font-semibold text-charcoal hover:bg-accent"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveVehicleChanges()}
+                disabled={vehicleSaving}
+                className="rounded-xl bg-charcoal px-4 py-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity inline-flex items-center gap-2"
+              >
+                {vehicleSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  `${editingVehicleName ? "Update" : "Add"} Vehicle`
+                )}
+              </button>
+            </div>
           </DialogContent>
         </Dialog>
-
-        <AlertDialog
-          open={Boolean(vehicleToDelete)}
-          onOpenChange={(open) => {
-            if (!open) setVehicleToDelete(null);
-          }}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Vehicle</AlertDialogTitle>
-              <AlertDialogDescription>
-                {vehicleToDelete
-                  ? `Delete ${vehicleToDelete.name}? This removes it from admin vehicles, the public vehicles section, and the booking dropdown on this browser.`
-                  : "Delete this vehicle?"}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-red-600 text-white hover:bg-red-700"
-                onClick={() => {
-                  if (!vehicleToDelete) return;
-                  void (async () => {
-                    try {
-                      await deleteVehicleFromDatabase(vehicleToDelete);
-                    } catch {
-                      deleteVehicle(vehicleToDelete.name);
-                    }
-                    if (editingVehicleName === vehicleToDelete.name) closeVehicleDialog();
-                    await refreshVehicles();
-                    setVehicleToDelete(null);
-                  })();
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </main>
     </div>
   );
 }
-
-function AdminField({
-  label,
-  className = "",
-  children,
-}: {
-  label: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <label className={className}>
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function PreviewField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border bg-[#f8f9fb] px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm font-medium text-charcoal">{value}</p>
-    </div>
-  );
-}
-
-function InvoicePreview({ form }: { form: QuotationForm }) {
-  const rate = formatQuotationMoney(form.rate);
-  const amount = formatQuotationNumber(form.amount);
-
-  return (
-    <div className="rounded-2xl border border-border bg-white p-4 shadow-soft">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h3 className="text-sm font-bold text-charcoal">Live Preview</h3>
-          <p className="text-xs text-muted-foreground">Updates as you type</p>
-        </div>
-        <p className="rounded-full bg-[#f8f9fb] px-3 py-1 text-xs font-semibold text-muted-foreground">{form.documentType}</p>
-      </div>
-      <div className="rounded-xl border border-border bg-white p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="Agra Taxis" className="h-12 w-12 rounded-lg border border-border bg-white object-contain" />
-            <div>
-              <p className="text-lg font-bold text-charcoal">Agra Taxis</p>
-              <p className="text-xs text-muted-foreground">Sri Lanka's trusted islandwide vehicle rental and taxi service</p>
-              <p className="text-xs font-semibold text-muted-foreground">{form.documentType}</p>
-            </div>
-          </div>
-          <div className="text-right text-xs text-muted-foreground">
-            <p>DATE : {form.date || "........................"}</p>
-            <p>VEHICLE NO : {form.vehicleNo || "........................"}</p>
-            <p>CAB NO : {form.cabNo || "........................"}</p>
-            <p>TEL : {form.tel || "........................"}</p>
-          </div>
-        </div>
-
-        <div className="my-4 border-t border-border" />
-
-        <div className="grid gap-3 text-sm sm:grid-cols-2">
-          <PreviewField label="Customer's Name" value={form.customerName || "...................."} />
-          <PreviewField label="Description" value={form.description || form.vehicle || "...................."} />
-          <PreviewField label="No. Of Kms" value={form.noOfKms || form.days || "...................."} />
-          <PreviewField label="Meter Reading Start" value={form.meterReadingStart || "...................."} />
-          <PreviewField label="Meter Reading End" value={form.meterReadingEnd || "...................."} />
-          <PreviewField label="Rate" value={formatQuotationMoney(form.rate, "....................")} />
-        </div>
-
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
-          <div className="grid grid-cols-[2fr_1fr_1fr] bg-[#f8f9fb] px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            <div>Description</div>
-            <div>Rate</div>
-            <div>Amount</div>
-          </div>
-          {[
-            [`For First ${form.firstKms || ".............................."} Kms`, rate, `Rs. ${amount}`],
-            [`Extra Additional ${form.extraKms || "..............................."} Kms`, rate, formatQuotationMoney(form.extraKms)],
-            [`${form.packageHours || "............................"} Hrs Package With ${form.packageWith || "............................"}`, rate, ""],
-            [`Extra Additional ${form.extraHours || "..............................."} Hrs`, rate, ""],
-            ["Loading Charges", "", formatQuotationMoney(form.loadingCharges)],
-            ["Pickup Charges", "", formatQuotationMoney(form.pickupCharges)],
-          ].map(([desc, rowRate, rowAmount]) => (
-            <div key={desc} className="grid grid-cols-[2fr_1fr_1fr] border-t border-border px-3 py-2 text-xs">
-              <div>{desc}</div>
-              <div>{rowRate}</div>
-              <div>{rowAmount}</div>
-            </div>
-          ))}
-          <div className="grid grid-cols-[2fr_1fr_1fr] border-t border-border bg-[#f8f9fb] px-3 py-2 text-xs font-bold">
-            <div>Total</div>
-            <div />
-            <div>Rs. {amount}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VehicleImageInput({
-  label,
-  image,
-  alt,
-  uploading,
-  disabled,
-  onUpload,
-  onDelete,
-}: {
-  label: string;
-  image?: string;
-  alt: string;
-  uploading: boolean;
-  disabled: boolean;
-  onUpload: (file: File | undefined) => void;
-  onDelete?: () => void;
-}) {
-  return (
-    <div className="grid gap-3">
-      <p className="text-xs font-semibold text-charcoal">{label}</p>
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-border bg-white shadow-soft">
-        {image ? (
-          <>
-            <img src={image} alt={alt} className="h-full w-full object-cover" />
-            {!disabled && onDelete && (
-              <button
-                type="button"
-                onClick={onDelete}
-                className="absolute right-2 top-2 rounded-lg bg-red-500 p-2 text-white hover:bg-red-600 transition-colors"
-                title="Delete image"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
-          </>
-        ) : (
-          <div className="flex h-full items-center justify-center text-xs font-semibold text-muted-foreground">
-            No image
-          </div>
-        )}
-        {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm">
-            <div className="flex flex-col items-center gap-2">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gold border-t-transparent" />
-              <span className="text-xs font-medium text-charcoal">Uploading...</span>
-            </div>
-          </div>
-        )}
-      </div>
-      <input
-        type="file"
-        accept="image/*"
-        disabled={disabled}
-        onChange={(event) => onUpload(event.target.files?.[0])}
-        className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-charcoal file:mr-3 file:rounded-lg file:border-0 file:bg-charcoal file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white disabled:opacity-60"
-      />
-    </div>
-  );
-}
-
-function PackagePriceTable({
-  title,
-  kmLimit,
-  prices,
-  acAvailable,
-  nonAcAvailable,
-  onAddDay,
-  onRemoveDay,
-  onChange,
-}: {
-  title: string;
-  kmLimit: number;
-  prices: PackagePrices;
-  acAvailable: boolean;
-  nonAcAvailable: boolean;
-  onAddDay: () => void;
-  onRemoveDay: (day: keyof PackagePrices) => void;
-  onChange: (day: keyof PackagePrices, priceKey: keyof DayPrices, value: number) => void;
-}) {
-  const columns: Array<{ key: keyof DayPrices; label: string }> = [];
-  if (acAvailable) {
-    columns.push({ key: "acNormal", label: "AC normal" }, { key: "acHill", label: "AC hill" });
-  }
-  if (nonAcAvailable) {
-    columns.push(
-      { key: "nonAcNormal", label: "Non AC normal" },
-      { key: "nonAcHill", label: "Non AC hill" },
-    );
-  }
-  const dayKeys = getPackageDayKeys(prices);
-
-  return (
-    <div className="sm:col-span-2 rounded-xl border border-border p-4">
-      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
-          <p className="text-sm font-semibold text-charcoal">Per-day package charges</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <p className="text-xs font-medium text-muted-foreground">Allows up to {kmLimit} km each day</p>
-          <button
-            type="button"
-            onClick={onAddDay}
-            className="rounded-lg bg-charcoal px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-          >
-            Add Day
-          </button>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="w-20 px-2 py-2 font-semibold">Day</th>
-              {columns.map((column) => (
-                <th key={column.key} className="px-2 py-2 font-semibold">{column.label}</th>
-              ))}
-              <th className="w-24 px-2 py-2 font-semibold">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {dayKeys.map((day) => {
-              const dayNumber = Number(String(day).replace("day", ""));
-              return (
-                <tr key={day} className="border-b border-border/70 last:border-0">
-                  <td className="px-2 py-2 text-xs font-semibold text-charcoal">Day {dayNumber}</td>
-                  {columns.map((column) => (
-                    <td key={column.key} className="px-2 py-2">
-                      <input
-                        type="number"
-                        min={0}
-                        value={prices[day]?.[column.key] ?? 0}
-                        onChange={(event) => onChange(day, column.key, Number(event.target.value))}
-                        className="w-full rounded-lg border border-border bg-background px-2 py-2 text-sm text-charcoal outline-none focus:ring-2 focus:ring-gold"
-                      />
-                    </td>
-                  ))}
-                  <td className="px-2 py-2">
-                    <button
-                      type="button"
-                      disabled={dayKeys.length <= 1}
-                      onClick={() => onRemoveDay(day)}
-                      className="rounded-lg border border-red-100 bg-red-50 px-2 py-2 text-xs font-semibold text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      Remove
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function LorryRateEditorTable({
-  rates,
-  onChange,
-  onChangeAll,
-  onAddWindow,
-  onRemoveWindow,
-  disabled = false,
-}: {
-  rates: LorryRates;
-  onChange: (key: string, field: string, value: string | number | null) => void;
-  onChangeAll: (field: string, value: number) => void;
-  onAddWindow: (key: string) => void;
-  onRemoveWindow: (key: string, idx: number) => void;
-  disabled?: boolean;
-}) {
-  const rows = Object.entries(rates);
-
-  return (
-    <div className="rounded-xl border border-border p-4">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Lorry Rate Configuration</p>
-          <p className="text-sm font-semibold text-charcoal">All types with distance-based pricing</p>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-muted/50">
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground min-w-20">Type</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">From KM</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">To KM</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Rate</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground border-r border-border">Extra/KM</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground border-r border-border">Hill Extra/KM</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Up/Down</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Waiting/Hr</th>
-              <th className="px-3 py-2 text-center text-xs font-semibold text-muted-foreground">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([key, row]) => (
-              row.windows.map((window, idx) => (
-                <tr key={`${key}-${idx}`} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
-                  {/* Type cell (only first row of each type) */}
-                  {idx === 0 ? (
-                    <td rowSpan={row.windows.length} className="px-3 py-2 border-r border-border align-middle">
-                      <input
-                        type="text"
-                        value={row.type}
-                        disabled={disabled}
-                        onChange={(event) => onChange(key, "type", event.target.value)}
-                        className="w-full rounded border border-border bg-background px-2 py-1.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                      />
-                    </td>
-                  ) : null}
-
-                  {/* Window distance range */}
-                  <td className="px-3 py-2 text-center">
-                    <input
-                      type="number"
-                      min={0}
-                      value={window.fromKm}
-                      disabled={disabled}
-                      onChange={(event) => onChange(key, `windows.${idx}.fromKm`, Number(event.target.value))}
-                      className="w-16 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    <input
-                      type="number"
-                      min={0}
-                      placeholder="∞"
-                      value={window.toKm ?? ""}
-                      disabled={disabled}
-                      onChange={(event) => onChange(key, `windows.${idx}.toKm`, event.target.value ? Number(event.target.value) : null)}
-                      className="w-16 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-                  </td>
-
-                  {/* Normal rates */}
-                  <td className="px-3 py-2 text-center">
-                    <input
-                      type="number"
-                      min={0}
-                      value={window.rate}
-                      disabled={disabled}
-                      onChange={(event) => onChange(key, `windows.${idx}.rate`, Number(event.target.value))}
-                      className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-center border-r border-border">
-                    <input
-                      type="number"
-                      min={0}
-                      value={window.extraPerKm}
-                      disabled={disabled}
-                      onChange={(event) => onChange(key, `windows.${idx}.extraPerKm`, Number(event.target.value))}
-                      className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-                  </td>
-
-                  {/* Hill country extra/km */}
-                  <td className="px-3 py-2 text-center border-r border-border">
-                    <input
-                      type="number"
-                      min={0}
-                      placeholder={String(window.extraPerKm)}
-                      value={window.hillExtraPerKm ?? ""}
-                      disabled={disabled}
-                      onChange={(event) => onChange(key, `windows.${idx}.hillExtraPerKm`, event.target.value ? Number(event.target.value) : null)}
-                      className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                    />
-                  </td>
-
-                  {/* Extra fields (only first row of each type) */}
-                  {idx === 0 ? (
-                    <>
-                      <td rowSpan={row.windows.length} className="px-3 py-2 text-center align-middle">
-                        <input
-                          type="number"
-                          min={0}
-                          value={row.extraUpDownCharge}
-                          disabled={disabled}
-                          onChange={(event) => onChange(key, "extraUpDownCharge", Number(event.target.value))}
-                          className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                        />
-                      </td>
-                      <td rowSpan={row.windows.length} className="px-3 py-2 text-center align-middle">
-                        <input
-                          type="number"
-                          min={0}
-                          value={row.waitingChargePerHour}
-                          disabled={disabled}
-                          onChange={(event) => onChange(key, "waitingChargePerHour", Number(event.target.value))}
-                          className="w-20 rounded border border-border bg-background px-2 py-1.5 text-sm text-center outline-none focus:ring-2 focus:ring-gold disabled:cursor-not-allowed disabled:opacity-60"
-                        />
-                      </td>
-                      <td rowSpan={row.windows.length} className="px-3 py-2 text-center align-middle border-l border-border">
-                        <button
-                          type="button"
-                          disabled={disabled}
-                          onClick={() => onAddWindow(key)}
-                          className="text-xs px-2 py-1 rounded bg-gold text-white hover:bg-gold/90 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                        >
-                          +
-                        </button>
-                      </td>
-                    </>
-                  ) : (
-                    <td className="px-3 py-2 text-center border-l border-border">
-                      <button
-                        type="button"
-                        disabled={disabled || row.windows.length <= 1}
-                        onClick={() => onRemoveWindow(key, idx)}
-                        className="text-xs px-2.5 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
-                      >
-                        ✕
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-

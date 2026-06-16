@@ -63,31 +63,31 @@ export function Fleet() {
   }, []);
 
   return (
-    <section id="fleet" className="bg-background py-24 lg:py-32">
+    <section id="fleet" className="bg-background py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="mx-auto max-w-3xl text-center">
           <div className="inline-flex items-center gap-3">
             <span className="h-px w-6 bg-gold" />
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-gold">Our Vehicles</span>
             <span className="h-px w-6 bg-gold" />
           </div>
-          <h2 className="mt-5 text-balance text-3xl font-bold leading-tight tracking-tight text-charcoal sm:text-4xl lg:text-5xl">
-            Premium Vehicles for Every Need
+          <h2 className="mt-6 text-balance text-4xl font-bold leading-tight tracking-tight text-charcoal sm:text-5xl lg:text-6xl">
+            Premium Vehicles for Every Journey
           </h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground lg:text-lg">
-            Choose by category, seats, comfort type, and per-kilometer rate.
+          <p className="mt-5 text-lg leading-relaxed text-muted-foreground lg:text-xl">
+            Explore our diverse fleet of well-maintained vehicles. Filter by category, comfort level, and find the perfect ride for your needs.
           </p>
         </div>
 
-        <div className="mt-10 flex flex-wrap justify-center gap-2.5">
+        <div className="mt-14 flex flex-wrap justify-center gap-3">
           {categoryList.map((c) => (
             <button
               key={c}
               onClick={() => setActive(c)}
-              className={`rounded-full border px-5 py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+              className={`rounded-full border-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                 active === c
-                  ? "border-charcoal bg-charcoal text-white shadow-card"
-                  : "border-border bg-white text-charcoal/70 hover:border-charcoal/30 hover:text-charcoal"
+                  ? "border-charcoal bg-charcoal text-white shadow-card hover:shadow-lg"
+                  : "border-border bg-white text-charcoal/60 hover:border-charcoal/20 hover:text-charcoal hover:bg-secondary/30"
               }`}
             >
               {c}
@@ -95,7 +95,7 @@ export function Fleet() {
           ))}
         </div>
 
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
           {loading ? (
             <>
               {[...Array(6)].map((_, i) => (
@@ -133,7 +133,7 @@ export function Fleet() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: i * 0.05 }}
-              className="group overflow-hidden rounded-2xl border border-border bg-white shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-card"
+              className="group overflow-hidden rounded-3xl border border-border/50 bg-white shadow-soft transition-all duration-300 hover:-translate-y-2 hover:shadow-lg hover:border-gold/20"
               onClick={() => navigate("/booking")}
               role="button"
               tabIndex={0}
@@ -155,10 +155,10 @@ export function Fleet() {
                 </div>
               </div>
 
-              <div className="p-5">
-                <h3 className="text-lg font-bold text-charcoal">{v.name}</h3>
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-charcoal">{v.name}</h3>
 
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="mt-4 flex flex-wrap gap-2">
                   {[
                     { icon: UserCheck, label: "Chauffeur" },
                     ...(v.acAvailable ? [{ icon: Snowflake, label: "AC" }] : []),
@@ -197,35 +197,21 @@ export function Fleet() {
                   </p>
                 </div>
 
-                {v.stayPrices && (
-                  <div className="mt-3 rounded-xl border border-border bg-[#f8f9fb] p-3">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Daily Stay Charges</p>
-                    <div className="grid grid-cols-5 gap-1 text-center text-[10px]">
-                      {([1, 2, 3, 4, 5] as const).map((d) => (
-                        <div key={d} className="rounded-lg bg-white py-1.5 shadow-soft">
-                          <div className="font-bold text-gold">D{d}</div>
-                          <div className="mt-0.5 text-charcoal">{formatLkr(v.stayPrices![`day${d}` as keyof typeof v.stayPrices])}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <p className="mt-3 text-[10px] leading-relaxed text-muted-foreground/70">
                   Rates are estimates. Final price confirmed per route and requirements.
                 </p>
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="mt-5 grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedVehicle(v);
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-white py-3 text-sm font-bold text-charcoal transition-all duration-200 hover:border-charcoal/30"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-border bg-white py-3 text-sm font-bold text-charcoal transition-all duration-200 hover:border-gold/40 hover:bg-secondary/20"
                   >
                     <Eye className="h-4 w-4" />
-                    Full View
+                    View
                   </button>
                   <button
                     type="button"
@@ -233,10 +219,10 @@ export function Fleet() {
                       e.stopPropagation();
                       navigate("/booking");
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal py-3 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-charcoal/90"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-charcoal py-3 text-sm font-bold text-white shadow-md transition-all duration-200 hover:bg-charcoal/85 hover:shadow-lg"
                   >
-                    Estimate
-                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-0.5" />
+                    Book
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:translate-x-1" />
                   </button>
                 </div>
               </div>
@@ -296,30 +282,20 @@ function VehicleFullView({ vehicle, onClose }: { vehicle: VehicleCatalogItem; on
               <DetailTile label="Comfort" value={[vehicle.acAvailable && "AC", vehicle.nonAcAvailable && "Non-AC"].filter(Boolean).join(" / ") || "N/A"} />
             </div>
 
-            <div className="rounded-lg border border-border">
-              <div className="border-b border-border px-4 py-3">
-                <p className="text-sm font-bold text-charcoal">Per-kilometer charges</p>
-              </div>
-              <RateTable vehicle={vehicle} />
-            </div>
-
-            {vehicle.package1Prices && (
+            {vehicle.category?.toLowerCase().includes("lorry") && vehicle.lorryRates ? (
               <div className="rounded-lg border border-border">
                 <div className="border-b border-border px-4 py-3">
-                  <p className="text-sm font-bold text-charcoal">Package day charges</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Packages include 150 km per day. Extra distance uses the selected per-km charge.</p>
-                </div>
-                <PackageTable vehicle={vehicle} />
-              </div>
-            )}
-
-            {vehicle.lorryRates && Object.keys(vehicle.lorryRates).length > 0 && (
-              <div className="rounded-lg border border-border">
-                <div className="border-b border-border px-4 py-3">
-                  <p className="text-sm font-bold text-charcoal">Lorry rate table</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">Start, extra, up/down, waiting, waiting hour, and between 100-130 km rates.</p>
+                  <p className="text-sm font-bold text-charcoal">Lorry Pricing Table</p>
+                  <p className="mt-0.5 text-xs text-muted-foreground">Complete breakdown of all charges including base fare, extra km, hill surcharge, up/down charge, and waiting fees.</p>
                 </div>
                 <LorryRateTable rates={vehicle.lorryRates} />
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border">
+                <div className="border-b border-border px-4 py-3">
+                  <p className="text-sm font-bold text-charcoal">Per-kilometer charges</p>
+                </div>
+                <RateTable vehicle={vehicle} />
               </div>
             )}
           </div>
@@ -385,98 +361,60 @@ function RateTable({ vehicle }: { vehicle: VehicleCatalogItem }) {
   );
 }
 
-function PackageTable({ vehicle }: { vehicle: VehicleCatalogItem }) {
-  const rows = Object.entries(vehicle.package1Prices || {}).sort(
-    ([a], [b]) => Number(a.replace("day", "")) - Number(b.replace("day", "")),
-  );
-  const visibleRows = rows.filter(([, prices]) => {
-    const hasAc = vehicle.acAvailable && (prices.acNormal > 0 || prices.acHill > 0);
-    const hasNonAc = vehicle.nonAcAvailable && (prices.nonAcNormal > 0 || prices.nonAcHill > 0);
-    return hasAc || hasNonAc;
+function LorryRateTable({ rates }: { rates: NonNullable<VehicleCatalogItem["lorryRates"]> }) {
+  const rows: Array<{type: string; fromKm: number; toKm: number; rate: number; extraPerKm: number; hillExtraPerKm: number; upDownNonHill: number; upDownHill: number; freeWaitingHours: number; waitingChargePerHour: number}> = [];
+
+  Object.values(rates).forEach((lorry) => {
+    if (lorry.windows && Array.isArray(lorry.windows)) {
+      lorry.windows.forEach((window) => {
+        rows.push({
+          type: lorry.type || "",
+          fromKm: window.fromKm || 0,
+          toKm: window.toKm || 0,
+          rate: window.rate || 0,
+          extraPerKm: window.extraPerKm || 0,
+          hillExtraPerKm: window.hillExtraPerKm || 0,
+          upDownNonHill: lorry.upDownNonHill || 0,
+          upDownHill: lorry.upDownHill || 0,
+          freeWaitingHours: lorry.freeWaitingHours || 0,
+          waitingChargePerHour: lorry.waitingChargePerHour || 0,
+        });
+      });
+    }
   });
 
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-secondary/70 text-[10px] uppercase tracking-wider text-muted-foreground">
-          <tr>
-            <th className="px-4 py-2">Day</th>
-            {vehicle.acAvailable && <th className="px-4 py-2">AC normal</th>}
-            {vehicle.acAvailable && <th className="px-4 py-2">AC hill</th>}
-            {vehicle.nonAcAvailable && <th className="px-4 py-2">Non-AC normal</th>}
-            {vehicle.nonAcAvailable && <th className="px-4 py-2">Non-AC hill</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {visibleRows.length > 0 ? visibleRows.map(([day, prices]) => (
-            <tr key={day} className="border-t border-border">
-              <td className="px-4 py-2 font-semibold text-charcoal">{day.replace("day", "Day ")}</td>
-              {vehicle.acAvailable && <td className="px-4 py-2">{prices.acNormal > 0 ? formatLkr(prices.acNormal) : "—"}</td>}
-              {vehicle.acAvailable && <td className="px-4 py-2">{prices.acHill > 0 ? formatLkr(prices.acHill) : "—"}</td>}
-              {vehicle.nonAcAvailable && <td className="px-4 py-2">{prices.nonAcNormal > 0 ? formatLkr(prices.nonAcNormal) : "—"}</td>}
-              {vehicle.nonAcAvailable && <td className="px-4 py-2">{prices.nonAcHill > 0 ? formatLkr(prices.nonAcHill) : "—"}</td>}
-            </tr>
-          )) : (
-            <tr>
-              <td className="px-4 py-3 text-sm text-muted-foreground" colSpan={1 + Number(vehicle.acAvailable) * 2 + Number(vehicle.nonAcAvailable) * 2}>
-                No active package day charges available.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function LorryRateTable({ rates }: { rates: NonNullable<VehicleCatalogItem["lorryRates"]> }) {
-  const rows = Object.values(rates).filter((row) =>
-    row.hillExtraPerKm > 0 ||
-    row.start > 0 ||
-    row.extra > 0 ||
-    row.upDown > 0 ||
-    row.waiting > 0 ||
-    row.waitingHour > 0 ||
-    row.between100And130 > 0 ||
-    row.maxUpDownKm > 0 ||
-    row.dropMinKm > 0 ||
-    row.dropMaxKm > 0,
-  );
-
-  if (!rows.length) return null;
+  if (!rows.length) return <div className="px-4 py-3 text-sm text-muted-foreground">No lorry rates available.</div>;
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-secondary/70 text-[10px] uppercase tracking-wider text-muted-foreground">
+      <table className="w-full text-left text-xs">
+        <thead className="bg-secondary text-[10px] font-bold uppercase tracking-wider text-charcoal">
           <tr>
-            <th className="px-4 py-2">Type</th>
-            <th className="px-4 py-2">Hill / KM</th>
-            <th className="px-4 py-2">Start</th>
-            <th className="px-4 py-2">Extra</th>
-            <th className="px-4 py-2">Up &amp; Down</th>
-            <th className="px-4 py-2">Waiting</th>
-            <th className="px-4 py-2">Waiting Hour</th>
-            <th className="px-4 py-2">Between 100-130 KM</th>
-            <th className="px-4 py-2">Up/Down Limit</th>
-            <th className="px-4 py-2">Drop Min</th>
-            <th className="px-4 py-2">Drop Max</th>
+            <th className="px-3 py-2 border-b border-border">Type</th>
+            <th className="px-3 py-2 border-b border-border">From KM</th>
+            <th className="px-3 py-2 border-b border-border">To KM</th>
+            <th className="px-3 py-2 border-b border-border">Rate</th>
+            <th className="px-3 py-2 border-b border-border">Extra/KM</th>
+            <th className="px-3 py-2 border-b border-border">Hill Extra/KM</th>
+            <th className="px-3 py-2 border-b border-border">UpDown (Normal)</th>
+            <th className="px-3 py-2 border-b border-border">UpDown (Hill)</th>
+            <th className="px-3 py-2 border-b border-border">Free Wait (h)</th>
+            <th className="px-3 py-2 border-b border-border">Wait/Hour</th>
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
-            <tr key={row.type} className="border-t border-border">
-              <td className="px-4 py-2 font-semibold text-charcoal">{row.type}</td>
-              <td className="px-4 py-2">{formatLkr(row.hillExtraPerKm)}</td>
-              <td className="px-4 py-2">{formatLkr(row.start)}</td>
-              <td className="px-4 py-2">{formatLkr(row.extra)}</td>
-              <td className="px-4 py-2">{formatLkr(row.upDown)}</td>
-              <td className="px-4 py-2">{formatLkr(row.waiting)}</td>
-              <td className="px-4 py-2">{formatLkr(row.waitingHour)}</td>
-              <td className="px-4 py-2">{formatLkr(row.between100And130)}</td>
-              <td className="px-4 py-2">{row.maxUpDownKm > 0 ? `${row.maxUpDownKm} km` : "—"}</td>
-              <td className="px-4 py-2">{row.dropMinKm > 0 ? `${row.dropMinKm} km` : "—"}</td>
-              <td className="px-4 py-2">{row.dropMaxKm > 0 ? `${row.dropMaxKm} km` : "—"}</td>
+          {rows.map((row, idx) => (
+            <tr key={idx} className="border-b border-border hover:bg-secondary/30">
+              <td className="px-3 py-2 font-semibold text-charcoal">{row.type}</td>
+              <td className="px-3 py-2">{row.fromKm}</td>
+              <td className="px-3 py-2">{row.toKm}</td>
+              <td className="px-3 py-2 font-semibold">{formatLkr(row.rate)}</td>
+              <td className="px-3 py-2">{formatLkr(row.extraPerKm)}</td>
+              <td className="px-3 py-2">{formatLkr(row.hillExtraPerKm)}</td>
+              <td className="px-3 py-2">{formatLkr(row.upDownNonHill)}</td>
+              <td className="px-3 py-2">{formatLkr(row.upDownHill)}</td>
+              <td className="px-3 py-2">{row.freeWaitingHours}</td>
+              <td className="px-3 py-2">{formatLkr(row.waitingChargePerHour)}</td>
             </tr>
           ))}
         </tbody>
