@@ -249,6 +249,14 @@ export function Fleet() {
 
 function VehicleFullView({ vehicle, onClose }: { vehicle: VehicleCatalogItem; onClose: () => void }) {
   const gallery = (vehicle.images?.length ? vehicle.images : [vehicle.img, vehicle.img2, vehicle.img3, vehicle.img4, vehicle.img5].filter(Boolean)) as string[];
+  console.log("Vehicle details:", {
+    name: vehicle.name,
+    category: vehicle.category,
+    isLorry: vehicle.category?.toLowerCase().includes("lorry"),
+    hasLorryRates: !!vehicle.lorryRates,
+    lorryRatesKeys: vehicle.lorryRates ? Object.keys(vehicle.lorryRates) : "none",
+    lorryRatesLength: vehicle.lorryRates ? Object.keys(vehicle.lorryRates).length : 0,
+  });
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   return (
