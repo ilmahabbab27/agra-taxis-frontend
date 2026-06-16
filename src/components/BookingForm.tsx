@@ -62,9 +62,7 @@ type PricingSummary = {
   lorryStartCharge?: number;
   lorryExtraKm?: number;
   lorryExtraCharge?: number;
-  lorryHillCharge?: number;
   lorryHillExtraPerKm?: number;
-  lorryUpDownCharge?: number;
   lorryWaitingCharge?: number;
 };
 
@@ -360,11 +358,10 @@ export function BookingForm() {
                                                                                     const activeLorryRate = resolvedLorryRate;
                                                                                         const activeLorryType = activeLorryRate?.type || "7 FT";
 
-          // Lorry: Base Fee + Extra Fee (hill or non-hill rate) + Up/Down Charge + Waiting Charge
+          // Lorry: 4-component calculation
           let lorryBaseFee = 0;
           let lorryExtraKm = 0;
           let lorryExtraFee = 0;
-          let lorryUpDownCharge = 0;
           let lorryWaitingCharge = 0;
 
           if (totalKm && activeLorryRate?.windows?.length) {
@@ -380,23 +377,26 @@ export function BookingForm() {
                 } else {
                   lorryBaseFee = window.rate;
                   lorryExtraKm = totalKm - windowEnd;
-                  // Use hillExtraPerKm if hill country, otherwise use extraPerKm
-                  const extraPerKmRate = selectedHillCountry ? (window.hillExtraPerKm ?? 0) : (window.extraPerKm ?? 0);
-                  lorryExtraFee = lorryExtraKm * extraPerKmRate;
+
+                  // Calculate extra km fee based on trip type and location
+                  if (form.trip === 'Round Trip') {
+                    // Round Trip: use upDown values
+                    const upDownRate = selectedHillCountry
+                      ? (activeLorryRate.upDownHill ?? 0)
+                      : (activeLorryRate.upDownNonHill ?? 0);
+                    lorryExtraFee = lorryExtraKm * upDownRate;
+                  } else {
+                    // One-Way (Drop): combine extraPerKm + hillExtraPerKm if hill
+                    const extraPerKmRate = selectedHillCountry
+                      ? ((window.extraPerKm ?? 0) + (window.hillExtraPerKm ?? 0))
+                      : (window.extraPerKm ?? 0);
+                    lorryExtraFee = lorryExtraKm * extraPerKmRate;
+                  }
                 }
               }
             }
 
-            // Up/Down charge (only if round-trip)
-            if (form.trip === 'Round Trip') {
-              if (selectedHillCountry) {
-                lorryUpDownCharge = activeLorryRate.upDownHill ?? 0;
-              } else {
-                lorryUpDownCharge = activeLorryRate.upDownNonHill ?? 0;
-              }
-            }
-
-            // Waiting charge (waitingHours currently 0, but structure ready for input)
+            // Waiting charge (calculated but NOT added to fare total - informational only)
             const waitingHours = 0;
             const freeWaitingHours = activeLorryRate.freeWaitingHours ?? 0;
             const waitingChargePerHour = activeLorryRate.waitingChargePerHour ?? 0;
@@ -406,8 +406,9 @@ export function BookingForm() {
             }
           }
 
+          // Fare = Base Fee + Extra KM Fee (waiting charge is NOT included)
           const lorryFare = totalKm && activeLorryRate
-            ? lorryBaseFee + lorryExtraFee + lorryUpDownCharge + lorryWaitingCharge
+            ? lorryBaseFee + lorryExtraFee
             : null;
     const fare = form.serviceType === "Lorry"
       ? lorryFare
@@ -456,7 +457,6 @@ export function BookingForm() {
       lorryExtraKm,
       lorryExtraCharge: lorryExtraFee,
       lorryHillExtraPerKm: activeLorryRate?.windows?.[0]?.hillExtraPerKm ?? 0,
-      lorryUpDownCharge: lorryUpDownCharge,
       lorryWaitingCharge: lorryWaitingCharge,
     });
   }
@@ -736,7 +736,7 @@ Thank you!`;
                     {form.serviceType === "Lorry" ? (
                       <div className="sm:col-span-2 space-y-3">
                         <div className="border border-white/10 bg-white/5 px-4 py-3 text-xs leading-relaxed text-white/60">
-                          Lorry pricing uses 5 components: base fee, extra km charge, hill surcharge, up/down charge (round-trip), and waiting charge (if applicable).
+                          Lorry pricing = Base Fee + Extra KM Charge (varies by trip type and location). Waiting charge shown for reference but not added to fare.
                         </div>
                         <LorryRateTable
                           rates={lorryRates}
@@ -870,13 +870,10 @@ Thank you!`;
                           {(summary.lorryExtraKm ?? 0) > 0 && (
                             <p><span className="font-semibold">2. Extra Fee:</span> {summary.lorryExtraKm} km @ {formatLkr(summary.effectivePricePerKm)}/km = {formatLkr(summary.lorryExtraCharge ?? 0)}</p>
                           )}
-                          {(summary.lorryUpDownCharge ?? 0) > 0 && (
-                            <p><span className="font-semibold">3. Up/Down Charge:</span> {formatLkr(summary.lorryUpDownCharge ?? 0)}</p>
-                          )}
                           {(summary.lorryWaitingCharge ?? 0) > 0 && (
-                            <p><span className="font-semibold">4. Waiting Charge:</span> {formatLkr(summary.lorryWaitingCharge ?? 0)}</p>
+                            <p className="text-white/60"><span className="font-semibold">3. Waiting Charge (info only):</span> {formatLkr(summary.lorryWaitingCharge ?? 0)}</p>
                           )}
-                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0) + (summary.lorryUpDownCharge ?? 0) + (summary.lorryWaitingCharge ?? 0))}</p>
+                          <p className="border-t border-white/10 pt-1 font-semibold text-white">Total Fare: {formatLkr((summary.lorryStartCharge ?? 0) + (summary.lorryExtraCharge ?? 0))}</p>
                         </>
                       ) : (
                         <p>Add pickup and destination to calculate the lorry fare.</p>
