@@ -292,7 +292,7 @@ function VehicleFullView({ vehicle, onClose }: { vehicle: VehicleCatalogItem; on
               <DetailTile label="Comfort" value={[vehicle.acAvailable && "AC", vehicle.nonAcAvailable && "Non-AC"].filter(Boolean).join(" / ") || "N/A"} />
             </div>
 
-            {vehicle.category?.toLowerCase().includes("lorry") && vehicle.lorryRates ? (
+            {/lorr/i.test(vehicle.category || "") && vehicle.lorryRates ? (
               <div className="rounded-lg border border-border">
                 <div className="border-b border-border px-4 py-3">
                   <p className="text-sm font-bold text-charcoal">Lorry Pricing Table</p>

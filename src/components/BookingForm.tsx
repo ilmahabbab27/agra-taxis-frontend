@@ -125,16 +125,16 @@ export function BookingForm() {
 
   const paxCount = Number(form.pax) || 0;
   const passengerVehicles = useMemo(
-    () => vehicleList.filter((vehicle) => !vehicle.category.toLowerCase().includes("lorry")),
+    () => vehicleList.filter((vehicle) => !/lorr/i.test(vehicle.category)),
     [vehicleList],
   );
   const lorryVehicles = useMemo(
-    () => lorryCatalog.length ? lorryCatalog : vehicleList.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry")),
+    () => lorryCatalog.length ? lorryCatalog : vehicleList.filter((vehicle) => /lorr/i.test(vehicle.category)),
     [lorryCatalog, vehicleList],
   );
   const selectedVehicle = vehicleList.length
     ? form.serviceType === "Lorry"
-      ? (lorryVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"))
+      ? (lorryVehicles.find((vehicle) => /lorr/i.test(vehicle.category))
         || lorryVehicles[0]
         || null)
       : getVehicleByName(form.vehicle, passengerVehicles.length ? passengerVehicles : vehicleList)
@@ -153,7 +153,7 @@ export function BookingForm() {
   const basePackageCharge = selectedPassengerVehicle
     ? getPackageCharge(selectedPassengerVehicle, Number(form.days) || 1, form.ac, selectedHillCountry)
     : 0;
-  const activeLorryVehicle = lorryVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"))
+  const activeLorryVehicle = lorryVehicles.find((vehicle) => /lorr/i.test(vehicle.category))
     || lorryVehicles[0]
     || null;
   const lorryRates = activeLorryVehicle?.lorryRates ?? {};
@@ -248,7 +248,7 @@ export function BookingForm() {
       setVehiclesLoading(false);
       setCategoryList(nextCategories);
       setVehicleList(nextVehicles);
-      const filteredLorries = nextVehicles.filter((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+      const filteredLorries = nextVehicles.filter((vehicle) => /lorr/i.test(vehicle.category));
       setLorryCatalog(filteredLorries);
       if (filteredLorries.length === 0) {
         console.warn("⚠ No lorries found in vehicle list. Total vehicles:", nextVehicles.length, "categories:", nextCategories);
@@ -260,7 +260,7 @@ export function BookingForm() {
         return { ...current, vehicle: nextVehicles[0]?.name || "" };
       });
       if (!lorrySelectionInitialized.current) {
-        const firstLorry = nextVehicles.find((vehicle) => vehicle.category.toLowerCase().includes("lorry"));
+        const firstLorry = nextVehicles.find((vehicle) => /lorr/i.test(vehicle.category));
         const firstKey = firstLorry ? Object.keys(firstLorry.lorryRates ?? {})[0] : "";
         if (firstKey) {
           setSelectedLorryKey(firstKey);
