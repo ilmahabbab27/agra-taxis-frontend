@@ -46,10 +46,12 @@ export function Fleet() {
           getLorriesFromDatabase(),
         ]);
         if (cancelled) return;
+        console.log("✓ Fleet loaded from database:", vehicles.length, "passenger vehicles,", lorries.length, "lorries");
         setVehicleList([...vehicles, ...lorries]);
         setCategoryList(Array.from(new Set([...categories, ...lorries.map((item) => item.category)])) as Category[]);
-      } catch {
+      } catch (error) {
         if (cancelled) return;
+        console.error("✗ Fleet loading error:", error);
         setVehicleList([...getVehicles(), ...[]]);
         setCategoryList(getVehicleCategories());
       } finally {
