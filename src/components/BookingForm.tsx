@@ -50,8 +50,14 @@ type PricingSummary = {
     additionalDistanceCharge: number;
     basePackageCharge: number;
     oneDayPackageDistanceCharge: number;
-    package1Estimate: number | null;
+  package1Estimate: number | null;
   package2Estimate: number | null;
+  includeOperatingCosts?: boolean;
+  vehicleCost?: number;
+  driverCharge?: number;
+  fuelCost?: number;
+  commissionAmount?: number;
+  commissionRate?: number;
   distanceKm: number | null;
   estimatedFare: number | null;
   pickupPin: PinPoint | null;
@@ -145,6 +151,7 @@ export function BookingForm() {
     Boolean(pickupPin && classifyHillCountry({}, pickupPin).isHillCountry) ||
     Boolean(destinationPin && classifyHillCountry({}, destinationPin).isHillCountry);
   const selectedPassengerVehicle = form.serviceType === "Passenger" ? selectedVehicle : null;
+  const includeOperatingCosts = Boolean(selectedPassengerVehicle?.includeOperatingCosts) && Number(form.days) > 1;
   const selectedPricePerKm = selectedPassengerVehicle
     ? getPricePerKm(selectedPassengerVehicle, form.ac, form.trip, selectedHillCountry)
     : 0;
@@ -174,6 +181,18 @@ export function BookingForm() {
   const oneDayPackageDistanceCharge = selectedPassengerVehicle && Number(form.days) === 1
     ? getDayPackageCharge(selectedPassengerVehicle, form.ac, selectedHillCountry)
     : 0;
+  const passengerVehicleCost = includeOperatingCosts
+    ? Math.max(0, Number(selectedPassengerVehicle?.vehicleCostPerDay) || 0) * (Number(form.days) || 1)
+    : 0;
+  const passengerDriverCharge = includeOperatingCosts
+    ? Math.max(0, Number(selectedPassengerVehicle?.driverChargePerDay) || 0) * (Number(form.days) || 1)
+    : 0;
+  const passengerFuelCost = includeOperatingCosts && distance?.km && selectedPassengerVehicle
+    ? getPassengerFuelCost(selectedPassengerVehicle, distance.km, selectedHillCountry)
+    : 0;
+  const passengerOperatingCost = passengerVehicleCost + passengerDriverCharge + passengerFuelCost;
+  const passengerCommissionRate = includeOperatingCosts ? Math.max(0, Number(selectedPassengerVehicle?.commissionRate) || 0) : 0;
+  const passengerCommissionAmount = includeOperatingCosts ? passengerOperatingCost * (passengerCommissionRate / 100) : 0;
 
   function update<K extends keyof typeof form>(k: K, v: string) {
     setErrors((e) => ({ ...e, [k]: undefined }));
@@ -412,11 +431,13 @@ export function BookingForm() {
             : null;
     const fare = form.serviceType === "Lorry"
       ? lorryFare
-      : Number(form.days) === 1
-        ? package1Estimate ?? package2Estimate
-        : totalKm && selectedPricePerKm
-          ? includedDistanceCharge + additionalDistanceCharge
-          : null;
+      : includeOperatingCosts
+        ? passengerOperatingCost + passengerCommissionAmount
+        : Number(form.days) === 1
+          ? package1Estimate ?? package2Estimate
+          : totalKm && selectedPricePerKm
+            ? includedDistanceCharge + additionalDistanceCharge
+            : null;
     const summaryDays = form.serviceType === "Lorry" ? "1" : form.days;
     setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     setSummary({
@@ -447,6 +468,12 @@ export function BookingForm() {
       oneDayPackageDistanceCharge,
       package1Estimate,
       package2Estimate,
+      includeOperatingCosts,
+      vehicleCost: passengerVehicleCost,
+      driverCharge: passengerDriverCharge,
+      fuelCost: passengerFuelCost,
+      commissionAmount: passengerCommissionAmount,
+      commissionRate: passengerCommissionRate,
       distanceKm: totalKm,
       estimatedFare: fare,
       pickupPin,
@@ -518,10 +545,11 @@ Price per km: ${summary.pricePerKm ? formatLkr(summary.pricePerKm) : "N/A"}
 Distance: ${summary.distanceKm ? `${summary.distanceKm} km ${summary.distanceSource === "route" ? "by road" : "straight line"}` : "Not calculated"}
 Per km rate: ${summary.pricePerKm ? formatLkr(summary.pricePerKm) : "N/A"}
 Estimated Fare: ${summary.estimatedFare ? formatLkr(summary.estimatedFare) : "Not calculated"}
-${Number(summary.days) === 1 ? `Package 1 estimate: ${summary.package1Estimate != null ? formatLkr(summary.package1Estimate) : "Not available"}\nPackage 2 estimate: ${summary.package2Estimate != null ? formatLkr(summary.package2Estimate) : "Not available"}` : ""}
-Included km: ${summary.includedKm} km
-Extra km: ${summary.additionalKm || 0} km
-Base/package charge: ${summary.includedDistanceCharge ? formatLkr(summary.includedDistanceCharge) : "N/A"}
+${summary.includeOperatingCosts
+  ? `Estimated trip fare: ${summary.estimatedFare ? formatLkr(summary.estimatedFare) : "Not calculated"}\nExtra km: Each extra kilometer will be charged at ${formatLkr(summary.pricePerKm)}.`
+  : Number(summary.days) === 1
+    ? `Package 1 estimate: ${summary.package1Estimate != null ? formatLkr(summary.package1Estimate) : "Not available"}\nPackage 2 estimate: ${summary.package2Estimate != null ? formatLkr(summary.package2Estimate) : "Not available"}`
+    : `Included km: ${summary.includedKm} km\nExtra km: ${summary.additionalKm || 0} km\nBase/package charge: ${summary.includedDistanceCharge ? formatLkr(summary.includedDistanceCharge) : "N/A"}`}
 Map Route: ${mapUrl || "Not available"}
 
 Thank you!`;
@@ -886,18 +914,20 @@ Thank you!`;
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <p className="text-base leading-7 text-white/80">
-                    Your trip is calculated based on the total distance travelled. Package 1 includes{" "}
-                    <span className="font-semibold text-white">{INCLUDED_KM_PER_DAY} km per day</span>.
-                    For{" "}
-                    <span className="font-semibold text-white">{summary.days}</span>
-                    {" "}day{Number(summary.days) === 1 ? "" : "s"}, the included distance is{" "}
-                    <span className="font-semibold text-white">{Number(summary.days) * INCLUDED_KM_PER_DAY} km</span>
-                    .
-                  </p>
+                  {!summary.includeOperatingCosts && (
+                    <p className="text-base leading-7 text-white/80">
+                      Your trip is calculated based on the total distance travelled. Package 1 includes{" "}
+                      <span className="font-semibold text-white">{INCLUDED_KM_PER_DAY} km per day</span>.
+                      For{" "}
+                      <span className="font-semibold text-white">{summary.days}</span>
+                      {" "}day{Number(summary.days) === 1 ? "" : "s"}, the included distance is{" "}
+                      <span className="font-semibold text-white">{Number(summary.days) * INCLUDED_KM_PER_DAY} km</span>
+                      .
+                    </p>
+                  )}
 
                   <div className="space-y-3">
-                    {summary.distanceKm && summary.distanceKm <= (Number(summary.days) * INCLUDED_KM_PER_DAY) && (
+                    {!summary.includeOperatingCosts && summary.distanceKm && summary.distanceKm <= (Number(summary.days) * INCLUDED_KM_PER_DAY) && (
                       <div className="border border-white/10 bg-white/5 px-4 py-3">
                         <p className="text-sm font-semibold text-white">Package 1 - day package</p>
                         <p className="mt-1 text-lg font-bold text-gold">
@@ -915,7 +945,21 @@ Thank you!`;
                       </div>
                     )}
 
-                    {Number(summary.days) === 1 && (
+                    {summary.includeOperatingCosts ? (
+                      <div className="border border-white/10 bg-white/5 px-4 py-3">
+                        <p className="text-sm font-semibold text-white">Estimated trip fare</p>
+                        <p className="mt-1 text-lg font-bold text-gold">
+                          {summary.estimatedFare != null ? formatLkr(summary.estimatedFare) : "Not available"}
+                        </p>
+                        <div className="mt-3 space-y-1 border-t border-white/10 pt-3 text-xs text-white/60">
+                          <p><span className="font-semibold">Extra km:</span> Each extra kilometer will be charged at {formatLkr(summary.pricePerKm)}.</p>
+                          <p><span className="font-semibold">Final cost:</span> {summary.estimatedFare != null ? formatLkr(summary.estimatedFare) : "Not available"}</p>
+                        </div>
+                        <p className="mt-2 text-xs leading-relaxed text-white/45">
+                          This is an estimate only. Final pricing may change based on route conditions, stops, waiting time, the actual trip duration, and the final per-km billing after the included allowance.
+                        </p>
+                      </div>
+                    ) : Number(summary.days) === 1 && (
                       <div className="border border-white/10 bg-white/5 px-4 py-3">
                         <p className="text-sm font-semibold text-white">Package 2 - distance based</p>
                         <p className="mt-1 text-lg font-bold text-gold">
@@ -998,6 +1042,18 @@ function getDayPackageCharge(vehicle: VehicleCatalogItem, ac: string, isHillCoun
   if (!packageRow) return 0;
   if (ac === "Non AC") return isHillCountry ? packageRow.nonAcHill : packageRow.nonAcNormal;
   return isHillCountry ? packageRow.acHill : packageRow.acNormal;
+}
+
+function getPassengerFuelCost(
+  vehicle: VehicleCatalogItem,
+  distanceKm: number,
+  isHillCountry: boolean,
+) {
+  const fuelPrice = Math.max(0, Number(vehicle.fuelPricePerLiter) || 0);
+  const kmPerLiter = isHillCountry
+    ? Math.max(0, Number(vehicle.hillKmPerLiter) || 0)
+    : Math.max(0, Number(vehicle.normalKmPerLiter) || 0);
+  return fuelPrice > 0 && kmPerLiter > 0 ? (fuelPrice / kmPerLiter) * distanceKm : 0;
 }
 
 function LorryRateTable({ rates, selectedKey }: { rates: LorryRates; selectedKey?: string }) {

@@ -85,6 +85,13 @@ const emptyVehicleForm: VehicleFormInput = {
   nonAcAvailable: true,
   package1Prices: { ...emptyPackagePrices },
   lorryRates: { ...emptyLorryRates },
+  vehicleCostPerDay: 0,
+  driverChargePerDay: 0,
+  fuelPricePerLiter: 0,
+  normalKmPerLiter: 0,
+  hillKmPerLiter: 0,
+  includeOperatingCosts: false,
+  commissionRate: 0,
 };
 
 function getPackageDayKeys(prices: PackagePrices): Array<keyof PackagePrices> {
@@ -794,6 +801,14 @@ function AdminDashboard() {
       acAvailable: vehicle.acAvailable,
       nonAcAvailable: vehicle.nonAcAvailable,
       package1Prices: vehicle.package1Prices ?? { ...emptyPackagePrices },
+      lorryRates: vehicle.lorryRates ?? { ...emptyLorryRates },
+      vehicleCostPerDay: vehicle.vehicleCostPerDay ?? 0,
+      driverChargePerDay: vehicle.driverChargePerDay ?? 0,
+      fuelPricePerLiter: vehicle.fuelPricePerLiter ?? 0,
+      normalKmPerLiter: vehicle.normalKmPerLiter ?? 0,
+      hillKmPerLiter: vehicle.hillKmPerLiter ?? 0,
+      includeOperatingCosts: vehicle.includeOperatingCosts ?? false,
+      commissionRate: vehicle.commissionRate ?? 0,
     };
     setVehicleForm(vehicleData);
     setEditingVehicle(vehicleData);
@@ -1643,6 +1658,83 @@ function AdminDashboard() {
                   className="h-4 w-4 rounded border-border"
                 />
               </AdminField>
+              <div className="border-t pt-4">
+                <h4 className="mb-4 font-semibold text-charcoal">Operating Costs</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AdminField label="Vehicle Cost Per Day">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.vehicleCostPerDay ?? 0}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, vehicleCostPerDay: Number(event.target.value) || 0 })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Driver Charge Per Day">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.driverChargePerDay ?? 0}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, driverChargePerDay: Number(event.target.value) || 0 })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Fuel Price Per Liter">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.fuelPricePerLiter ?? 0}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, fuelPricePerLiter: Number(event.target.value) || 0 })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Normal Km Per Liter">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.normalKmPerLiter ?? 0}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, normalKmPerLiter: Number(event.target.value) || 0 })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Hill Km Per Liter">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingVehicle.hillKmPerLiter ?? 0}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, hillKmPerLiter: Number(event.target.value) || 0 })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Commission Rate">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={editingVehicle.commissionRate ?? 0}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, commissionRate: Number(event.target.value) || 0 })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Calculation Logic" className="sm:col-span-2">
+                    <label className="flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-3 text-sm font-semibold text-charcoal">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editingVehicle.includeOperatingCosts)}
+                        onChange={(event) => setEditingVehicle({ ...editingVehicle, includeOperatingCosts: event.target.checked })}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                      With operational cost
+                    </label>
+                  </AdminField>
+                </div>
+              </div>
               {editingVehicle.acAvailable && (
               <div className="border-t pt-4">
                 <h4 className="mb-4 font-semibold text-charcoal">Pricing - AC (8 Tiers)</h4>

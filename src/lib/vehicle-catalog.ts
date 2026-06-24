@@ -81,6 +81,13 @@ export type VehicleCatalogItem = {
   package1Prices?: PackagePrices;
   stayPrices?: StayPrices;
   lorryRates?: LorryRates;
+  vehicleCostPerDay?: number;
+  driverChargePerDay?: number;
+  fuelPricePerLiter?: number;
+  normalKmPerLiter?: number;
+  hillKmPerLiter?: number;
+  includeOperatingCosts?: boolean;
+  commissionRate?: number;
   isCustom?: boolean;
 };
 
@@ -421,6 +428,13 @@ function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
     nonAcAvailable: vehicle.nonAcAvailable,
     package1Prices: normalizePackagePrices(vehicle.package1Prices),
     lorryRates: normalizeLorryRates(vehicle.lorryRates),
+    vehicleCostPerDay: Math.max(0, Number(vehicle.vehicleCostPerDay) || 0),
+    driverChargePerDay: Math.max(0, Number(vehicle.driverChargePerDay) || 0),
+    fuelPricePerLiter: Math.max(0, Number(vehicle.fuelPricePerLiter) || 0),
+    normalKmPerLiter: Math.max(0, Number(vehicle.normalKmPerLiter) || 0),
+    hillKmPerLiter: Math.max(0, Number(vehicle.hillKmPerLiter) || 0),
+    includeOperatingCosts: Boolean(vehicle.includeOperatingCosts),
+    commissionRate: Math.max(0, Number(vehicle.commissionRate) || 0),
   };
 }
 
@@ -469,6 +483,13 @@ function normalizeApiVehicle(vehicle: Partial<VehicleCatalogItem>) {
       ?? (vehicle as Record<string, unknown>).rate_table
       ?? (vehicle as Record<string, unknown>).lorry_rates,
     ),
+    vehicleCostPerDay: readNumber(vehicle.vehicleCostPerDay, (vehicle as Record<string, unknown>).vehicle_cost_per_day),
+    driverChargePerDay: readNumber(vehicle.driverChargePerDay, (vehicle as Record<string, unknown>).driver_charge_per_day),
+    fuelPricePerLiter: readNumber(vehicle.fuelPricePerLiter, (vehicle as Record<string, unknown>).fuel_price_per_liter),
+    normalKmPerLiter: readNumber(vehicle.normalKmPerLiter, (vehicle as Record<string, unknown>).normal_km_per_liter),
+    hillKmPerLiter: readNumber(vehicle.hillKmPerLiter, (vehicle as Record<string, unknown>).hill_km_per_liter),
+    includeOperatingCosts: Boolean(vehicle.includeOperatingCosts ?? (vehicle as Record<string, unknown>).include_operating_costs),
+    commissionRate: readNumber(vehicle.commissionRate, (vehicle as Record<string, unknown>).commission_rate),
   };
 }
 

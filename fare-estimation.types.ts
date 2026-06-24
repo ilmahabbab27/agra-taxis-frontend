@@ -73,6 +73,13 @@ export interface VehicleCatalogItem {
   nonAcAvailable: boolean;
   package1Prices?: PackagePrices;
   perKmPrices?: PerKmPrices;
+  vehicleCostPerDay?: number;
+  driverChargePerDay?: number;
+  fuelPricePerLiter?: number;
+  normalKmPerLiter?: number;
+  hillKmPerLiter?: number;
+  includeOperatingCosts?: boolean;
+  commissionRate?: number;
 }
 
 export interface PassengerTripDetails {
