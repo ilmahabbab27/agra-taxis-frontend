@@ -161,12 +161,22 @@ export function LocationMapPicker({
         const km = await getMultiPointRouteDistanceKm(resolved, controller.signal);
         const total = Number(km.toFixed(1));
         const next: RouteDistance = { km: total, source: "route" };
+        console.log("Route distance calculated", {
+          points: resolved,
+          distanceKm: total,
+          source: next.source,
+        });
         setDistance(next);
         onDistanceChange(next);
       } catch {
         const straight = haversineTotal(resolved);
         const total = Number(straight.toFixed(1));
         const next: RouteDistance = { km: total, source: "straight" };
+        console.log("Straight-line distance fallback", {
+          points: resolved,
+          distanceKm: total,
+          source: next.source,
+        });
         setDistance(next);
         onDistanceChange(next);
       } finally {

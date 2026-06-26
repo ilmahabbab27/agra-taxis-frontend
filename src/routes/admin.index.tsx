@@ -849,6 +849,21 @@ function AdminDashboard() {
       // fall back to the already loaded in-memory data
     }
 
+    const passengerVehicles = vehicles
+      .filter((vehicle) => !vehicle.category.toLowerCase().includes("lorry"))
+      .map((vehicle) => ({
+        name: vehicle.name,
+        passengerType: vehicle.category,
+        seats: vehicle.seats,
+      }));
+
+    const lorryTypes = lorries.map((lorry) => ({
+      name: lorry.name,
+      lorryTypes: Object.values(lorry.lorryRates || {})
+        .map((rate) => rate.type || "")
+        .filter(Boolean),
+    }));
+
     const payload = {
       exportedAt: new Date().toISOString(),
       company: {
@@ -858,8 +873,8 @@ function AdminDashboard() {
         whatsapp: WHATSAPP,
         email: EMAIL,
       },
-      lorries,
-      vehicles,
+      passengerVehicles,
+      lorryTypes,
     };
     const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

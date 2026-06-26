@@ -438,6 +438,17 @@ export function BookingForm() {
           : totalKm && selectedPricePerKm
             ? includedDistanceCharge + additionalDistanceCharge
             : null;
+    console.log("Booking fare calculation", {
+      serviceType: form.serviceType,
+      vehicle: form.vehicle,
+      distanceKm: totalKm,
+      distanceSource: distance?.source,
+      includedKm,
+      additionalKm,
+      billableKm,
+      fare,
+      includeOperatingCosts,
+    });
     const summaryDays = form.serviceType === "Lorry" ? "1" : form.days;
     setTimeout(() => summaryRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
     setSummary({
@@ -513,6 +524,12 @@ export function BookingForm() {
       estimatedFare: summary.estimatedFare ? String(Math.round(summary.estimatedFare)) : "",
       mapUrl,
     };
+
+    console.log("Booking form payload", {
+      form,
+      summary,
+      booking,
+    });
 
     try {
       saveBooking(booking);
