@@ -9,6 +9,7 @@ import Booking from "./pages/Booking";
 import Contact from "./pages/Contact";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./routes/admin.index";
+import { WhatsAppFloat } from "./components/WhatsAppFloat";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ScrollToTop />
+        <WhatsAppFloat />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/about" element={<About />} />
