@@ -1,6 +1,6 @@
 # Lorry External Fare Estimate API
 
-This file is for people building an external chatbot or tool that needs only the lorry fare endpoint.
+This file is for people building an external assistant or tool that needs only the lorry fare endpoint.
 
 ## Endpoint
 

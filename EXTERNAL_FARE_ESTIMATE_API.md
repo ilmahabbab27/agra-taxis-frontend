@@ -1,8 +1,8 @@
-# WhatsApp Chatbot Fare Estimate Guide
+# WhatsApp Fare Estimate Guide
 
-This document is for people building an external WhatsApp chatbot that talks to the Agra Taxis fare estimate API.
+This document is for people building an external WhatsApp assistant that talks to the Agra Taxis fare estimate API.
 
-The chatbot should:
+The assistant should:
 
 1. collect answers step by step
 2. map number replies to values
@@ -27,13 +27,13 @@ Agra Taxis වෙත සාදරයෙන් පිළිගනිමු 👋
 
 Contact us:
 Phone: 072 300 3000
-WhatsApp: 94723003000
+WhatsApp: 94702504044
 Email: info@agrataxis.com
 Website: https://agrataxis.com
 
 අප අමතන්න:
 Phone: 072 300 3000
-WhatsApp: 94723003000
+WhatsApp: 94702504044
 Email: info@agrataxis.com
 Website: https://agrataxis.com
 
@@ -91,12 +91,12 @@ POST /external/fare-estimate
 
 Use:
 
-- `POST` for structured chatbot payloads
+- `POST` for structured assistant payloads
 - `GET` if you want a simple URL-based request
 
 ## Global Controls
 
-Show these on every chatbot step:
+Show these on every step:
 
 - `0` Main menu / ප්‍රධාන මෙනුව
 - `9` Back / ආපසු
@@ -249,7 +249,7 @@ const data = await res.json();
 
 ## Lorry Flow
 
-For lorry, do not ask AC in the chatbot.
+For lorry, do not ask AC in the flow.
 
 ### 1. Lorry Type
 
@@ -429,7 +429,7 @@ Example error response:
 From export:
 
 - Phone: `072 300 3000`
-- WhatsApp: `94723003000`
+- WhatsApp: `94702504044`
 - Email: `info@agrataxis.com`
 
 Use these for support handoff or contact cards.

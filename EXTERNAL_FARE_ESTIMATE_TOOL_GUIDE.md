@@ -1,6 +1,6 @@
 # External Fare Estimate Tool Guide
 
-This guide is for people building an external chatbot or tool that talks to the Agra Taxis fare estimate API.
+This guide is for people building an external assistant or tool that talks to the Agra Taxis fare estimate API.
 
 ## Endpoint
 
