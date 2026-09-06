@@ -75,6 +75,9 @@ const emptyVehicleForm: VehicleFormInput = {
   category: "Cars",
   img: "/assets/car.jpg",
   img2: undefined,
+  img3: undefined,
+  img4: undefined,
+  img5: undefined,
   seats: 4,
   acPricePerKm: 0,
   acHillPricePerKm: 0,
@@ -92,6 +95,21 @@ const emptyVehicleForm: VehicleFormInput = {
   hillKmPerLiter: 0,
   includeOperatingCosts: false,
   commissionRate: 0,
+  vehicleNumber: "",
+  vehicleModel: "",
+  vehicleColour: "",
+  district: "",
+  currentLocation: "",
+  vehicleRegistrationDocument: "",
+  insuranceDocument: "",
+  driverFullName: "",
+  driverPhoto: "",
+  contactNumber: "",
+  address: "",
+  nicCopy: "",
+  drivingLicenceCopy: "",
+  ownerName: "",
+  ownerContactNumber: "",
 };
 
 function getPackageDayKeys(prices: PackagePrices): Array<keyof PackagePrices> {
@@ -108,6 +126,7 @@ function getPackageDayNumbers(prices: PackagePrices): number[] {
 type AdminTab = "vehicles" | "lorries" | "invoices";
 type ImageSlot = "img" | "img2" | "img3" | "img4" | "img5";
 type LorryImageForm = Pick<VehicleFormInput, ImageSlot>;
+type VehicleImageForm = Pick<VehicleFormInput, ImageSlot>;
 
 type QuotationForm = {
   documentType: "Quotation" | "Invoice";
@@ -284,6 +303,13 @@ function AdminDashboard() {
     img4: undefined,
     img5: undefined,
   });
+  const [vehicleImageForm, setVehicleImageForm] = useState<VehicleImageForm>({
+    img: "/assets/car.jpg",
+    img2: undefined,
+    img3: undefined,
+    img4: undefined,
+    img5: undefined,
+  });
   const [isLorryEditing, setIsLorryEditing] = useState(false);
   const [lorrySaveStatus, setLorrySaveStatus] = useState("");
   const [ready, setReady] = useState(false);
@@ -309,6 +335,9 @@ function AdminDashboard() {
   const vehicleImageRefs = {
     img: useRef<HTMLInputElement>(null),
     img2: useRef<HTMLInputElement>(null),
+    img3: useRef<HTMLInputElement>(null),
+    img4: useRef<HTMLInputElement>(null),
+    img5: useRef<HTMLInputElement>(null),
   };
 
   useEffect(() => {
@@ -636,6 +665,10 @@ function AdminDashboard() {
     setLorryImageForm((current) => ({ ...current, [key]: value }));
   }
 
+  function updateVehicleImageForm(key: ImageSlot, value: string | undefined) {
+    setVehicleImageForm((current) => ({ ...current, [key]: value }));
+  }
+
   async function saveLorryImages(imageData: LorryImageForm) {
     if (!currentLorry || !currentLorry.id) return;
     setSavingLorryImages(true);
@@ -698,7 +731,7 @@ function AdminDashboard() {
     }
   }
 
-  async function onVehicleImageUpload(file: File | undefined, target: "img" | "img2") {
+  async function onVehicleImageUpload(file: File | undefined, target: ImageSlot) {
     if (!file || !file.type.startsWith("image/")) return;
     setImageUploading(target);
     try {
@@ -713,11 +746,15 @@ function AdminDashboard() {
       const payload = await response.json() as { url: string };
       const fullUrl = API_BASE.replace(/\/api$/, "") + payload.url;
       updateVehicleForm(target, fullUrl);
+      updateVehicleImageForm(target, fullUrl);
     } catch {
       // fallback: embed as base64 if upload fails
       const reader = new FileReader();
       reader.onload = () => {
-        if (typeof reader.result === "string") updateVehicleForm(target, reader.result);
+        if (typeof reader.result === "string") {
+          updateVehicleForm(target, reader.result);
+          updateVehicleImageForm(target, reader.result);
+        }
       };
       reader.readAsDataURL(file);
     } finally {
@@ -792,6 +829,9 @@ function AdminDashboard() {
       category: vehicle.category,
       img: vehicle.img,
       img2: vehicle.img2,
+      img3: vehicle.img3,
+      img4: vehicle.img4,
+      img5: vehicle.img5,
       seats: vehicle.seats,
       acPricePerKm: vehicle.acPricePerKm,
       acHillPricePerKm: vehicle.acHillPricePerKm,
@@ -809,15 +849,44 @@ function AdminDashboard() {
       hillKmPerLiter: vehicle.hillKmPerLiter ?? 0,
       includeOperatingCosts: vehicle.includeOperatingCosts ?? false,
       commissionRate: vehicle.commissionRate ?? 0,
+      vehicleNumber: vehicle.vehicleNumber ?? "",
+      vehicleModel: vehicle.vehicleModel ?? "",
+      vehicleColour: vehicle.vehicleColour ?? "",
+      district: vehicle.district ?? "",
+      currentLocation: vehicle.currentLocation ?? "",
+      vehicleRegistrationDocument: vehicle.vehicleRegistrationDocument ?? "",
+      insuranceDocument: vehicle.insuranceDocument ?? "",
+      driverFullName: vehicle.driverFullName ?? "",
+      driverPhoto: vehicle.driverPhoto ?? "",
+      contactNumber: vehicle.contactNumber ?? "",
+      address: vehicle.address ?? "",
+      nicCopy: vehicle.nicCopy ?? "",
+      drivingLicenceCopy: vehicle.drivingLicenceCopy ?? "",
+      ownerName: vehicle.ownerName ?? "",
+      ownerContactNumber: vehicle.ownerContactNumber ?? "",
     };
     setVehicleForm(vehicleData);
     setEditingVehicle(vehicleData);
+    setVehicleImageForm({
+      img: vehicle.img,
+      img2: vehicle.img2,
+      img3: vehicle.img3,
+      img4: vehicle.img4,
+      img5: vehicle.img5,
+    });
     setIsVehicleDialogOpen(true);
   }
 
   function resetVehicleForm() {
     setVehicleForm(emptyVehicleForm);
     setEditingVehicle(emptyVehicleForm);
+    setVehicleImageForm({
+      img: "/assets/car.jpg",
+      img2: undefined,
+      img3: undefined,
+      img4: undefined,
+      img5: undefined,
+    });
     setEditingVehicleName(null);
     setVehicleSaveError("");
   }
@@ -1648,31 +1717,141 @@ function AdminDashboard() {
                   <option value="Mini Bus">Mini Bus</option>
                 </select>
               </AdminField>
-              <AdminField label="Seats">
-                <input
-                  type="number"
-                  min={1}
-                  value={editingVehicle.seats}
-                  onChange={(event) => setEditingVehicle({ ...editingVehicle, seats: Number(event.target.value) || 1 })}
-                  className={adminInputClass}
-                />
-              </AdminField>
-              <AdminField label="AC Available">
-                <input
-                  type="checkbox"
-                  checked={editingVehicle.acAvailable}
-                  onChange={(event) => setEditingVehicle({ ...editingVehicle, acAvailable: event.target.checked })}
-                  className="h-4 w-4 rounded border-border"
-                />
-              </AdminField>
-              <AdminField label="Non-AC Available">
-                <input
-                  type="checkbox"
-                  checked={editingVehicle.nonAcAvailable}
-                  onChange={(event) => setEditingVehicle({ ...editingVehicle, nonAcAvailable: event.target.checked })}
-                  className="h-4 w-4 rounded border-border"
-                />
-              </AdminField>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <AdminField label="Vehicle Number">
+                  <input
+                    value={editingVehicle.vehicleNumber ?? ""}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, vehicleNumber: event.target.value })}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="Vehicle Model">
+                  <input
+                    value={editingVehicle.vehicleModel ?? ""}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, vehicleModel: event.target.value })}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="Vehicle Colour">
+                  <input
+                    value={editingVehicle.vehicleColour ?? ""}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, vehicleColour: event.target.value })}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="Seat Capacity">
+                  <input
+                    type="number"
+                    min={1}
+                    value={editingVehicle.seats}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, seats: Number(event.target.value) || 1 })}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="District">
+                  <input
+                    value={editingVehicle.district ?? ""}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, district: event.target.value })}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="Current Location">
+                  <input
+                    value={editingVehicle.currentLocation ?? ""}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, currentLocation: event.target.value })}
+                    className={adminInputClass}
+                  />
+                </AdminField>
+                <AdminField label="A/C Available">
+                  <input
+                    type="checkbox"
+                    checked={editingVehicle.acAvailable}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, acAvailable: event.target.checked })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                </AdminField>
+                <AdminField label="Non-A/C Available">
+                  <input
+                    type="checkbox"
+                    checked={editingVehicle.nonAcAvailable}
+                    onChange={(event) => setEditingVehicle({ ...editingVehicle, nonAcAvailable: event.target.checked })}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                </AdminField>
+              </div>
+              <div className="border-t pt-4">
+                <h4 className="mb-4 font-semibold text-charcoal">Driver Details</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AdminField label="Driver Full Name">
+                    <input
+                      value={editingVehicle.driverFullName ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, driverFullName: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Contact Number">
+                    <input
+                      value={editingVehicle.contactNumber ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, contactNumber: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Address" className="sm:col-span-2">
+                    <textarea
+                      value={editingVehicle.address ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, address: event.target.value })}
+                      className={`${adminInputClass} min-h-24`}
+                    />
+                  </AdminField>
+                  <AdminField label="Vehicle Owner Name">
+                    <input
+                      value={editingVehicle.ownerName ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, ownerName: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Owner Contact Number">
+                    <input
+                      value={editingVehicle.ownerContactNumber ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, ownerContactNumber: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                </div>
+              </div>
+              <div className="border-t pt-4">
+                <h4 className="mb-4 font-semibold text-charcoal">Documents</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AdminField label="Vehicle Registration Document">
+                    <input
+                      value={editingVehicle.vehicleRegistrationDocument ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, vehicleRegistrationDocument: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Insurance Document">
+                    <input
+                      value={editingVehicle.insuranceDocument ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, insuranceDocument: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="NIC Copy">
+                    <input
+                      value={editingVehicle.nicCopy ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, nicCopy: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                  <AdminField label="Driving Licence Copy">
+                    <input
+                      value={editingVehicle.drivingLicenceCopy ?? ""}
+                      onChange={(event) => setEditingVehicle({ ...editingVehicle, drivingLicenceCopy: event.target.value })}
+                      className={adminInputClass}
+                    />
+                  </AdminField>
+                </div>
+              </div>
               <div className="border-t pt-4">
                 <h4 className="mb-4 font-semibold text-charcoal">Operating Costs</h4>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -1926,16 +2105,19 @@ function AdminDashboard() {
 
               <AdminField label="Images (Upload)">
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {(["img", "img2"] as const).map((key) => (
+                  {(["img", "img2", "img3", "img4", "img5"] as const).map((key) => (
                     <div key={key} className="flex flex-col gap-2">
                       <label className="text-xs font-semibold text-charcoal uppercase">{key}</label>
                       <div className="relative overflow-hidden rounded-lg border-2 border-dashed border-border bg-gray-50 h-24 flex items-center justify-center group">
-                        {editingVehicle[key] && (
+                        {vehicleImageForm[key] && (
                           <>
-                            <img src={editingVehicle[key]} alt={key} className="h-24 w-full object-cover absolute inset-0" />
+                            <img src={vehicleImageForm[key]} alt={key} className="h-24 w-full object-cover absolute inset-0" />
                             <button
                               type="button"
-                              onClick={() => setEditingVehicle({ ...editingVehicle, [key]: "" })}
+                              onClick={() => {
+                                setEditingVehicle({ ...editingVehicle, [key]: "" });
+                                updateVehicleImageForm(key, undefined);
+                              }}
                               className="absolute top-1 right-1 z-20 rounded-full bg-red-500 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600"
                               title="Delete image"
                             >
@@ -1943,11 +2125,15 @@ function AdminDashboard() {
                             </button>
                           </>
                         )}
-                        {!editingVehicle[key] && (
+                        {!vehicleImageForm[key] && (
                           <input
                             ref={vehicleImageRefs[key]}
                             type="file"
                             accept="image/*"
+                            onClick={(event) => {
+                              const ref = vehicleImageRefs[key].current;
+                              if (ref) ref.value = "";
+                            }}
                             onChange={(e) => {
                               const file = e.target.files?.[0];
                               if (!file || !file.type.startsWith("image/")) return;
@@ -1955,6 +2141,7 @@ function AdminDashboard() {
                               reader.onload = () => {
                                 if (typeof reader.result === "string") {
                                   setEditingVehicle({ ...editingVehicle, [key]: reader.result });
+                                  updateVehicleImageForm(key, reader.result);
                                 }
                               };
                               reader.readAsDataURL(file);

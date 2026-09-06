@@ -88,6 +88,21 @@ export type VehicleCatalogItem = {
   hillKmPerLiter?: number;
   includeOperatingCosts?: boolean;
   commissionRate?: number;
+  vehicleNumber?: string;
+  vehicleModel?: string;
+  vehicleColour?: string;
+  district?: string;
+  currentLocation?: string;
+  vehicleRegistrationDocument?: string;
+  insuranceDocument?: string;
+  driverFullName?: string;
+  driverPhoto?: string;
+  contactNumber?: string;
+  address?: string;
+  nicCopy?: string;
+  drivingLicenceCopy?: string;
+  ownerName?: string;
+  ownerContactNumber?: string;
   isCustom?: boolean;
 };
 
@@ -435,6 +450,21 @@ function normalizeVehicle(vehicle: VehicleFormInput): VehicleFormInput {
     hillKmPerLiter: Math.max(0, Number(vehicle.hillKmPerLiter) || 0),
     includeOperatingCosts: Boolean(vehicle.includeOperatingCosts),
     commissionRate: Math.max(0, Number(vehicle.commissionRate) || 0),
+    vehicleNumber: vehicle.vehicleNumber?.trim() || undefined,
+    vehicleModel: vehicle.vehicleModel?.trim() || undefined,
+    vehicleColour: vehicle.vehicleColour?.trim() || undefined,
+    district: vehicle.district?.trim() || undefined,
+    currentLocation: vehicle.currentLocation?.trim() || undefined,
+    vehicleRegistrationDocument: vehicle.vehicleRegistrationDocument?.trim() || undefined,
+    insuranceDocument: vehicle.insuranceDocument?.trim() || undefined,
+    driverFullName: vehicle.driverFullName?.trim() || undefined,
+    driverPhoto: vehicle.driverPhoto?.trim() || undefined,
+    contactNumber: vehicle.contactNumber?.trim() || undefined,
+    address: vehicle.address?.trim() || undefined,
+    nicCopy: vehicle.nicCopy?.trim() || undefined,
+    drivingLicenceCopy: vehicle.drivingLicenceCopy?.trim() || undefined,
+    ownerName: vehicle.ownerName?.trim() || undefined,
+    ownerContactNumber: vehicle.ownerContactNumber?.trim() || undefined,
   };
 }
 
@@ -490,6 +520,21 @@ function normalizeApiVehicle(vehicle: Partial<VehicleCatalogItem>) {
     hillKmPerLiter: readNumber(vehicle.hillKmPerLiter, (vehicle as Record<string, unknown>).hill_km_per_liter),
     includeOperatingCosts: Boolean(vehicle.includeOperatingCosts ?? (vehicle as Record<string, unknown>).include_operating_costs),
     commissionRate: readNumber(vehicle.commissionRate, (vehicle as Record<string, unknown>).commission_rate),
+    vehicleNumber: String(vehicle.vehicleNumber ?? (vehicle as Record<string, unknown>).vehicle_number ?? ""),
+    vehicleModel: String(vehicle.vehicleModel ?? (vehicle as Record<string, unknown>).vehicle_model ?? ""),
+    vehicleColour: String(vehicle.vehicleColour ?? (vehicle as Record<string, unknown>).vehicle_colour ?? ""),
+    district: String(vehicle.district ?? (vehicle as Record<string, unknown>).district ?? ""),
+    currentLocation: String(vehicle.currentLocation ?? (vehicle as Record<string, unknown>).current_location ?? ""),
+    vehicleRegistrationDocument: String(vehicle.vehicleRegistrationDocument ?? (vehicle as Record<string, unknown>).vehicle_registration_document ?? ""),
+    insuranceDocument: String(vehicle.insuranceDocument ?? (vehicle as Record<string, unknown>).insurance_document ?? ""),
+    driverFullName: String(vehicle.driverFullName ?? (vehicle as Record<string, unknown>).driver_full_name ?? ""),
+    driverPhoto: String(vehicle.driverPhoto ?? (vehicle as Record<string, unknown>).driver_photo ?? ""),
+    contactNumber: String(vehicle.contactNumber ?? (vehicle as Record<string, unknown>).contact_number ?? ""),
+    address: String(vehicle.address ?? (vehicle as Record<string, unknown>).address ?? ""),
+    nicCopy: String(vehicle.nicCopy ?? (vehicle as Record<string, unknown>).nic_copy ?? ""),
+    drivingLicenceCopy: String(vehicle.drivingLicenceCopy ?? (vehicle as Record<string, unknown>).driving_licence_copy ?? ""),
+    ownerName: String(vehicle.ownerName ?? (vehicle as Record<string, unknown>).owner_name ?? ""),
+    ownerContactNumber: String(vehicle.ownerContactNumber ?? (vehicle as Record<string, unknown>).owner_contact_number ?? ""),
   };
 }
 
