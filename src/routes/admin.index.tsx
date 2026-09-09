@@ -1010,6 +1010,9 @@ function AdminDashboard() {
             </div>
           </Link>
           <div className="flex items-center gap-2">
+            <Link to="/admin/drivers" className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-white/70 transition-all hover:bg-white/8 hover:text-white">
+              Driver Applications
+            </Link>
             <button
               onClick={() => void exportJson()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gold/25 bg-gold/8 px-3 py-1.5 text-xs font-semibold text-gold/90 transition-all hover:border-gold/40 hover:bg-gold/15"

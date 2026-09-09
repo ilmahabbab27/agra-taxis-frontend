@@ -10,6 +10,10 @@ import Contact from "./pages/Contact";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./routes/admin.index";
 import { WhatsAppFloat } from "./components/WhatsAppFloat";
+import DriverRegister from "./pages/DriverRegister";
+import DriverLogin from "./pages/DriverLogin";
+import DriverAccount from "./pages/DriverAccount";
+import AdminDrivers from "./pages/AdminDrivers";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +40,10 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/drivers/register" element={<DriverRegister />} />
+          <Route path="/drivers/login" element={<DriverLogin />} />
+          <Route path="/drivers/account" element={<DriverAccount />} />
+          <Route path="/admin/drivers" element={<AdminDrivers />} />
           <Route path="*" element={<Index />} />
         </Routes>
       </BrowserRouter>

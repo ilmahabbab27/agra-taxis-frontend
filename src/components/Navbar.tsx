@@ -12,6 +12,7 @@ const links = [
   { to: "/fleet", label: "Vehicles" },
   { to: "/booking", label: "Booking" },
   { to: "/contact", label: "Contact" },
+  { to: "/drivers/register", label: "Join as driver" },
 ];
 
 export function Navbar() {
@@ -60,6 +61,16 @@ export function Navbar() {
 
         <div className="flex items-center gap-2.5">
           <a
+            href="/drivers/login"
+            className={`hidden rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 md:inline-flex ${
+              scrolled
+                ? "border border-gold/40 text-charcoal hover:border-gold hover:bg-gold/10"
+                : "border border-white/25 text-white/90 hover:border-white hover:bg-white/10"
+            }`}
+          >
+            Driver login
+          </a>
+          <a
             href="/booking"
             className={`hidden items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 md:inline-flex ${
               scrolled
@@ -107,6 +118,12 @@ export function Navbar() {
                 </a>
               ))}
               <div className="mt-3 grid grid-cols-2 gap-2">
+                <a
+                  href="/drivers/login"
+                  className="inline-flex items-center justify-center rounded-xl border border-gold/40 px-4 py-3 text-sm font-semibold text-charcoal transition-colors hover:bg-gold/10"
+                >
+                  Driver login
+                </a>
                 <a
                   href="/booking"
                   className="inline-flex items-center justify-center rounded-xl border border-charcoal/15 px-4 py-3 text-sm font-semibold text-charcoal transition-colors hover:bg-charcoal hover:text-white"

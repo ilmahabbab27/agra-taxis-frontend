@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent } from "react";
 import { motion } from "framer-motion";
 import { Lock, ArrowLeft, Loader2, Mail } from "lucide-react";
 import { adminLogin, isAdminAuthed } from "@/lib/admin-store";
@@ -13,9 +13,11 @@ export default function AdminLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  if (isAdminAuthed()) {
-    navigate("/admin");
-  }
+  useEffect(() => {
+    if (isAdminAuthed()) {
+      navigate("/admin", { replace: true });
+    }
+  }, [navigate]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
