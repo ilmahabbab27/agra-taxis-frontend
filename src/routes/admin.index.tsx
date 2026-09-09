@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } 
 import { Car, Download, LogOut, Pencil, Plus, Trash2, Loader2, RotateCw } from "lucide-react";
 import { adminLogout, isAdminAuthed } from "@/lib/admin-store";
 import { API_BASE } from "@/lib/api";
+import { getAllDriverRides, getDriverRegistrations, type DriverRide, type DriverRegistration } from "@/lib/driver-portal";
 import { EMAIL, PHONE, PHONE_DISPLAY, WHATSAPP } from "@/lib/contact";
 import {
   deleteVehicle,
@@ -123,7 +124,7 @@ function getPackageDayNumbers(prices: PackagePrices): number[] {
   return getPackageDayKeys(prices).map((key) => Number(String(key).replace("day", "")));
 }
 
-type AdminTab = "vehicles" | "lorries" | "invoices";
+type AdminTab = "overview" | "vehicles" | "lorries" | "invoices";
 type ImageSlot = "img" | "img2" | "img3" | "img4" | "img5";
 type LorryImageForm = Pick<VehicleFormInput, ImageSlot>;
 type VehicleImageForm = Pick<VehicleFormInput, ImageSlot>;
@@ -293,6 +294,8 @@ function AdminDashboard() {
   const [seatFilter, setSeatFilter] = useState("all");
   const [comfortFilter, setComfortFilter] = useState<"all" | "ac" | "nonAc">("all");
   const [activeTab, setActiveTab] = useState<AdminTab>("vehicles");
+  const [overviewDrivers, setOverviewDrivers] = useState<DriverRegistration[]>([]);
+  const [overviewRides, setOverviewRides] = useState<DriverRide[]>([]);
   const [quotationForm, setQuotationForm] = useState<QuotationForm>(emptyQuotationForm);
   const [lorryRates, setLorryRates] = useState<LorryRates>(emptyLorryRates);
   const [allLorryRates, setAllLorryRates] = useState<Map<string, LorryRates>>(new Map());
@@ -348,6 +351,19 @@ function AdminDashboard() {
     void refreshVehicles();
     setReady(true);
   }, [navigate]);
+
+  useEffect(() => {
+    if (activeTab !== "overview") return;
+    void Promise.all([getDriverRegistrations(), getAllDriverRides()])
+      .then(([drivers, rides]) => {
+        setOverviewDrivers(drivers);
+        setOverviewRides(rides);
+      })
+      .catch(() => {
+        setOverviewDrivers([]);
+        setOverviewRides([]);
+      });
+  }, [activeTab]);
 
   // Auto-select first lorry if none selected
   useEffect(() => {
@@ -1013,6 +1029,9 @@ function AdminDashboard() {
             <Link to="/admin/drivers" className="inline-flex items-center gap-1.5 rounded-lg border border-white/8 bg-white/4 px-3 py-1.5 text-xs font-semibold text-white/70 transition-all hover:bg-white/8 hover:text-white">
               Driver Applications
             </Link>
+            <Link to="/admin/driver-rides" className="inline-flex items-center gap-1.5 rounded-lg border border-gold/25 bg-gold/8 px-3 py-1.5 text-xs font-semibold text-gold/90 transition-all hover:border-gold/40 hover:bg-gold/15">
+              Ride History
+            </Link>
             <button
               onClick={() => void exportJson()}
               className="inline-flex items-center gap-1.5 rounded-lg border border-gold/25 bg-gold/8 px-3 py-1.5 text-xs font-semibold text-gold/90 transition-all hover:border-gold/40 hover:bg-gold/15"
@@ -1039,6 +1058,7 @@ function AdminDashboard() {
 
         <div className="mb-6 flex flex-wrap gap-2 rounded-2xl border border-border bg-white p-2 shadow-soft">
           {[
+            { id: "overview" as const, label: "Overview" },
             { id: "vehicles" as const, label: "Vehicles" },
             { id: "lorries" as const, label: "Lorries" },
             { id: "invoices" as const, label: "Invoices / Quotations" },
@@ -1056,7 +1076,55 @@ function AdminDashboard() {
               {tab.label}
             </button>
           ))}
+          <Link
+            to="/admin/drivers"
+            className="rounded-xl px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-[#f0f2f5] hover:text-charcoal"
+          >
+            Driver Applications
+          </Link>
+          <Link
+            to="/admin/driver-rides"
+            className="rounded-xl px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-[#f0f2f5] hover:text-charcoal"
+          >
+            Ride History
+          </Link>
         </div>
+
+        {activeTab === "overview" && (() => {
+          const pending = overviewDrivers.filter((driver) => driver.status === "pending").length;
+          const approved = overviewDrivers.filter((driver) => driver.status === "approved").length;
+          const rejected = overviewDrivers.filter((driver) => driver.status === "rejected").length;
+          const paid = overviewRides.filter((ride) => ride.paymentStatus === "paid").length;
+          const unpaid = overviewRides.filter((ride) => ride.paymentStatus === "unpaid").length;
+          const partial = overviewRides.filter((ride) => ride.paymentStatus === "partial").length;
+          const totalValue = overviewRides.reduce((sum, ride) => sum + ride.totalAmount, 0);
+          const maxRides = Math.max(1, ...overviewDrivers.map((driver) => overviewRides.filter((ride) => ride.driverId === driver.id).length));
+          const paymentTotal = Math.max(1, overviewRides.length);
+          const paidPercent = (paid / paymentTotal) * 100;
+          const partialPercent = (partial / paymentTotal) * 100;
+          const monthLabels = Array.from({ length: 6 }, (_, index) => {
+            const date = new Date();
+            date.setMonth(date.getMonth() - (5 - index));
+            return { key: `${date.getFullYear()}-${date.getMonth()}`, label: date.toLocaleDateString("en-LK", { month: "short" }) };
+          });
+          const monthData = monthLabels.map((month) => overviewRides.filter((ride) => { const date = new Date(ride.rideDate); return `${date.getFullYear()}-${date.getMonth()}` === month.key; }));
+          const maxMonthlyValue = Math.max(1, ...monthData.map((month) => month.reduce((sum, ride) => sum + ride.totalAmount, 0)));
+          const bar = (value: number, max: number) => `${Math.max(3, (value / max) * 100)}%`;
+          return <section className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[{ label: "Driver applications", value: overviewDrivers.length }, { label: "Total rides", value: overviewRides.length }, { label: "Paid rides", value: paid }, { label: "Total ride value", value: `Rs. ${totalValue.toLocaleString("en-LK", { maximumFractionDigits: 2 })}` }].map((card) => <div key={card.label} className="rounded-2xl border border-border bg-white p-5 shadow-soft"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{card.label}</p><p className="mt-3 text-2xl font-bold text-charcoal">{card.value}</p></div>)}
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border border-border bg-white p-6 shadow-soft"><h2 className="font-bold">Application status</h2><div className="mt-5 space-y-4">{[["Pending", pending, "bg-amber-400"], ["Approved", approved, "bg-emerald-500"], ["Rejected", rejected, "bg-red-500"]].map(([label, value, color]) => <div key={String(label)}><div className="mb-1 flex justify-between text-sm"><span>{label}</span><b>{value}</b></div><div className="h-3 rounded-full bg-[#f0f2f5]"><div className={`h-3 rounded-full ${color}`} style={{ width: bar(Number(value), Math.max(1, overviewDrivers.length)) }} /></div></div>)}</div></div>
+              <div className="rounded-2xl border border-border bg-white p-6 shadow-soft"><h2 className="font-bold">Payment status</h2><div className="mt-5 space-y-4">{[["Paid", paid, "bg-emerald-500"], ["Partial", partial, "bg-amber-400"], ["Unpaid", unpaid, "bg-red-500"]].map(([label, value, color]) => <div key={String(label)}><div className="mb-1 flex justify-between text-sm"><span>{label}</span><b>{value}</b></div><div className="h-3 rounded-full bg-[#f0f2f5]"><div className={`h-3 rounded-full ${color}`} style={{ width: bar(Number(value), Math.max(1, overviewRides.length)) }} /></div></div>)}</div></div>
+            </div>
+            <div className="rounded-2xl border border-border bg-white p-6 shadow-soft"><h2 className="font-bold">Rides by driver</h2><div className="mt-5 space-y-4">{overviewDrivers.length ? overviewDrivers.map((driver) => { const count = overviewRides.filter((ride) => ride.driverId === driver.id).length; return <div key={driver.id}><div className="mb-1 flex justify-between text-sm"><span>{driver.fullName}</span><b>{count}</b></div><div className="h-4 rounded-full bg-[#f0f2f5]"><div className="h-4 rounded-full bg-gold" style={{ width: bar(count, maxRides) }} /></div></div>; }) : <p className="text-sm text-muted-foreground">No driver data available.</p>}</div></div>
+            <div className="grid gap-6 lg:grid-cols-[0.8fr_1.2fr]">
+              <div className="rounded-2xl border border-border bg-white p-6 shadow-soft"><h2 className="font-bold">Payment mix</h2><div className="mt-5 flex items-center gap-6"><div className="relative h-36 w-36 shrink-0 rounded-full" style={{ background: `conic-gradient(#16a34a 0 ${paidPercent}%, #fbbf24 ${paidPercent}% ${paidPercent + partialPercent}%, #ef4444 ${paidPercent + partialPercent}% 100%)` }}><div className="absolute inset-7 flex items-center justify-center rounded-full bg-white text-center"><span className="text-xl font-bold">{overviewRides.length}</span></div></div><div className="space-y-3 text-sm"><p><span className="mr-2 inline-block h-3 w-3 rounded-full bg-emerald-500" />Paid: <b>{paid}</b></p><p><span className="mr-2 inline-block h-3 w-3 rounded-full bg-amber-400" />Partial: <b>{partial}</b></p><p><span className="mr-2 inline-block h-3 w-3 rounded-full bg-red-500" />Unpaid: <b>{unpaid}</b></p></div></div></div>
+              <div className="rounded-2xl border border-border bg-white p-6 shadow-soft"><div className="flex items-center justify-between"><h2 className="font-bold">Ride value trend</h2><span className="text-xs text-muted-foreground">Last 6 months</span></div><div className="mt-5 flex h-40 items-end gap-3 border-b border-l border-border px-3 pb-0 pt-4">{monthData.map((month, index) => { const value = month.reduce((sum, ride) => sum + ride.totalAmount, 0); return <div key={monthLabels[index].key} className="flex h-full flex-1 flex-col items-center justify-end gap-2"><div title={`Rs. ${value.toLocaleString("en-LK")}`} className="w-full max-w-12 rounded-t-lg bg-gold transition-all hover:bg-charcoal" style={{ height: `${Math.max(5, (value / maxMonthlyValue) * 100)}%` }} /><span className="text-xs text-muted-foreground">{monthLabels[index].label}</span></div>; })}</div></div>
+            </div>
+          </section>;
+        })()}
 
         {/* Stats row */}
         {isFleetTab && <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">

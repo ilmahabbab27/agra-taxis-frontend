@@ -1,15 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ExternalLink, Eye, LogOut, Pencil, Search, SlidersHorizontal, X } from "lucide-react";
+import { ExternalLink, Eye, History, LogOut, Pencil, Search, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { adminLogout, isAdminAuthed } from "@/lib/admin-store";
 import { API_BASE } from "@/lib/api";
 import {
   getDriverRegistrations,
+  getDriverRides,
+  deleteDriver,
   updateDriverRegistration,
   updateDriverStatus,
   type DriverRegistration,
+  type DriverRide,
 } from "@/lib/driver-portal";
 import { districtsByProvince, provinces } from "@/lib/sri-lanka-locations";
+
+const proofUrl = (file: string) =>
+  file.startsWith("http") || file.startsWith("data:")
+    ? file
+    : `${API_BASE.replace(/\/api$/, "")}/storage/app/public/${file}`;
 
 function DocumentLinks({ files, label }: { files: string[]; label: string }) {
   const documentUrl = (file: string) =>
@@ -71,6 +79,7 @@ export default function AdminDrivers() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [acFilter, setAcFilter] = useState("all");
   const [selected, setSelected] = useState<DriverRegistration | null>(null);
+  const [profileRides, setProfileRides] = useState<DriverRide[]>([]);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<DriverRegistration | null>(null);
   const [editFiles, setEditFiles] = useState<{
@@ -102,9 +111,26 @@ export default function AdminDrivers() {
       })
       .finally(() => setLoading(false));
   }, [navigate]);
+  useEffect(() => {
+    if (!selected || !/^\d+$/.test(selected.id)) {
+      setProfileRides([]);
+      return;
+    }
+    void getDriverRides(selected.id).then(setProfileRides).catch(() => setProfileRides([]));
+  }, [selected]);
   async function changeStatus(id: string, status: DriverRegistration["status"]) {
     await updateDriverStatus(id, status);
     setItems((current) => current.map((item) => (item.id === id ? { ...item, status } : item)));
+  }
+  async function removeDriver(driver: DriverRegistration) {
+    if (!/^\d+$/.test(driver.id) || !window.confirm(`Delete ${driver.fullName}? All ride and payment history for this driver will also be permanently deleted.`)) return;
+    try {
+      await deleteDriver(driver.id);
+      setItems((current) => current.filter((item) => item.id !== driver.id));
+      if (selected?.id === driver.id) setSelected(null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "Could not delete driver.");
+    }
   }
   const provinces = [...new Set(items.map((item) => item.province).filter(Boolean))].sort();
   const districts = [...new Set(items.map((item) => item.district).filter(Boolean))].sort();
@@ -187,6 +213,9 @@ export default function AdminDrivers() {
           </div>
           <Link to="/drivers/register" className="text-sm font-bold text-gold">
             View registration portal <ExternalLink className="ml-1 inline h-4 w-4" />
+          </Link>
+          <Link to="/admin/driver-rides" className="ml-4 text-sm font-bold text-gold">
+            All ride history
           </Link>
         </div>
         {!loading && !loadError && items.length > 0 && (
@@ -351,6 +380,12 @@ export default function AdminDrivers() {
                         className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-[#f7f5ef]"
                       >
                         <Pencil className="h-3.5 w-3.5" /> Edit
+                      </button>
+                      <button type="button" onClick={() => navigate(`/admin/drivers/${item.id}/rides`)} className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-gold px-3 py-2 text-xs font-bold text-gold hover:bg-gold hover:text-charcoal">
+                        <History className="h-3.5 w-3.5" /> Rides & payments
+                      </button>
+                      <button type="button" onClick={() => void removeDriver(item)} className="ml-1 inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50">
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
                       </button>
                     </td>
                   </tr>
@@ -647,6 +682,25 @@ export default function AdminDrivers() {
                   </div>
                 </div>
               )}
+              <div className="mt-6 rounded-2xl border border-border bg-[#f7f5ef] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold">Ride and payment history</h3>
+                    <p className="text-xs text-muted-foreground">{profileRides.length} rides recorded for this driver</p>
+                  </div>
+                  <Link to={`/admin/drivers/${selected.id}/rides`} className="rounded-lg bg-charcoal px-3 py-2 text-xs font-bold text-white">
+                    Open full history
+                  </Link>
+                </div>
+                {profileRides.length > 0 ? (
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="min-w-[760px] w-full text-left text-xs">
+                      <thead><tr className="border-b border-border"><th className="px-2 py-2">Date</th><th className="px-2 py-2">Route</th><th className="px-2 py-2">Breakdown</th><th className="px-2 py-2">Payment</th><th className="px-2 py-2">Proof</th></tr></thead>
+                      <tbody>{profileRides.map((ride) => <tr key={ride.id} className="border-b border-border/60"><td className="px-2 py-2">{ride.rideDate}</td><td className="px-2 py-2">{ride.pickup} to {ride.destination}</td><td className="px-2 py-2">Ride {ride.rideAmount.toFixed(2)} + Driver {ride.driverPayment.toFixed(2)} + Other {ride.otherCharges.toFixed(2)}<br /><b>Total {ride.totalAmount.toFixed(2)}</b></td><td className="px-2 py-2 font-bold capitalize">{ride.paymentStatus}<br /><span className="font-normal">{ride.paymentMethod}</span></td><td className="px-2 py-2">{ride.paymentProof ? <a href={proofUrl(ride.paymentProof)} target="_blank" rel="noreferrer" className="text-gold underline">View proof</a> : "None"}</td></tr>)}</tbody>
+                    </table>
+                  </div>
+                ) : <p className="mt-3 text-sm text-muted-foreground">No ride history recorded yet.</p>}
+              </div>
               <div className="mt-6 grid gap-5 sm:grid-cols-3">
                 <div>
                   <h3 className="mb-2 font-bold">Vehicle photos</h3>

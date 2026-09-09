@@ -34,6 +34,19 @@ export type DriverRegistration = {
   createdAt: string;
 };
 
+export type DriverRide = {
+  id: string; driverId: string | null; rideDate: string; customerName: string; customerPhone: string; pickup: string;
+  destination: string; tripType: string; distanceKm: number; rideAmount: number; driverPayment: number;
+  otherCharges: number; totalAmount: number; paymentStatus: "paid" | "unpaid" | "partial";
+  paymentMethod: string; notes: string; paymentProof: string;
+};
+
+export type DriverRideInput = Omit<DriverRide, "id" | "totalAmount" | "paymentProof"> & { paymentProofFile?: File };
+
+function normalizeRide(row: Record<string, unknown>): DriverRide {
+  return { id: String(row.id), driverId: row.driver_id == null && row.driverId == null ? null : String(row.driver_id ?? row.driverId), rideDate: String(row.ride_date ?? row.rideDate), customerName: String(row.customer_name ?? row.customerName), customerPhone: String(row.customer_phone ?? row.customerPhone ?? ""), pickup: String(row.pickup), destination: String(row.destination), tripType: String(row.trip_type ?? row.tripType), distanceKm: Number(row.distance_km ?? row.distanceKm ?? 0), rideAmount: Number(row.ride_amount ?? row.rideAmount ?? 0), driverPayment: Number(row.driver_payment ?? row.driverPayment ?? 0), otherCharges: Number(row.other_charges ?? row.otherCharges ?? 0), totalAmount: Number(row.total_amount ?? row.totalAmount ?? 0), paymentStatus: row.payment_status as DriverRide["paymentStatus"], paymentMethod: String(row.payment_method ?? row.paymentMethod ?? ""), notes: String(row.notes ?? ""), paymentProof: String(row.payment_proof ?? row.paymentProof ?? "") };
+}
+
 export type DriverRegistrationInput = Omit<DriverRegistration, "id" | "status" | "createdAt" | "username"> & {
   password: string;
   vehiclePhotoFiles?: File[];
@@ -227,6 +240,32 @@ export async function getDriverRegistrations(): Promise<DriverRegistration[]> {
     console.error("Failed to load driver applications", error);
     throw error;
   }
+}
+
+export async function getDriverRides(driverId: string): Promise<DriverRide[]> {
+  const rows = await request(`/admin/drivers/${driverId}/rides`);
+  return (Array.isArray(rows) ? rows : rows.data || []).map((row: Record<string, unknown>) => normalizeRide(row));
+}
+
+export async function getAllDriverRides(): Promise<DriverRide[]> {
+  const rows = await request("/admin/driver-rides");
+  return (Array.isArray(rows) ? rows : rows.data || []).map((row: Record<string, unknown>) => normalizeRide(row));
+}
+
+export async function saveDriverRide(driverId: string, input: DriverRideInput, rideId?: string) {
+  const form = new FormData();
+  Object.entries(input).forEach(([key, value]) => { if (key !== "paymentProofFile" && value !== undefined) form.append(key, String(value)); });
+  if (input.paymentProofFile) form.append("paymentProof", input.paymentProofFile);
+  const result = await request(`/admin/drivers/${driverId}/rides${rideId ? `/${rideId}` : ""}`, { method: "POST", body: form });
+  return normalizeRide(result.ride || result);
+}
+
+export async function deleteDriverRide(driverId: string, rideId: string) {
+  return request(driverId ? `/admin/drivers/${driverId}/rides/${rideId}` : `/admin/driver-rides/${rideId}`, { method: "DELETE" });
+}
+
+export async function deleteDriver(driverId: string) {
+  return request(`/admin/driver-registrations/${driverId}`, { method: "DELETE" });
 }
 
 export async function updateDriverStatus(id: string, status: DriverRegistration["status"]) {
