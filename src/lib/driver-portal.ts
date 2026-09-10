@@ -84,7 +84,7 @@ function generatedUsername(email: string) {
   return email.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 80) || "driver";
 }
 
-async function request(path: string, options?: RequestInit, authToken = getAdminToken()) {
+async function request(path: string, options?: RequestInit, authToken = getAdminToken(), timeoutMs = 15000) {
   const token = authToken;
   const url = `${API_BASE}${path}`;
   console.info("Driver portal API request", {
@@ -93,7 +93,7 @@ async function request(path: string, options?: RequestInit, authToken = getAdmin
     hasToken: Boolean(token),
   });
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15000);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   const startedAt = performance.now();
   let response: Response;
   try {
@@ -114,6 +114,11 @@ async function request(path: string, options?: RequestInit, authToken = getAdmin
       durationMs: Math.round(performance.now() - startedAt),
     });
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      const timeoutError = new Error("The server took too long to process the upload. Please try again with smaller files.");
+      console.error("Driver portal request timed out", { method: options?.method || "GET", url, timeoutMs });
+      throw timeoutError;
+    }
     console.error("Driver portal network/CORS/timeout error", {
       method: options?.method || "GET",
       url,
@@ -163,7 +168,7 @@ export async function registerDriver(input: DriverRegistrationInput) {
   vehiclePhotoFiles?.forEach((file) => form.append("vehiclePhotos[]", file));
   if (driverDocumentFile) form.append("driverDocument", driverDocumentFile);
   if (insuranceDocumentFile) form.append("insuranceDocument", insuranceDocumentFile);
-  return request("/driver-registrations", { method: "POST", body: form });
+  return request("/driver-registrations", { method: "POST", body: form }, getAdminToken(), 120000);
 }
 
 export async function loginDriver(email: string, password: string) {
@@ -211,7 +216,7 @@ export async function sendDriverPasswordReset(email: string) {
   return request("/driver-auth/forgot-password", {
     method: "POST",
     body: JSON.stringify({ email }),
-  });
+  }, getAdminToken(), 60000);
 }
 
 export async function changeDriverPassword(token: string, password: string) {

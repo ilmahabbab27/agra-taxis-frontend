@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Phone } from "lucide-react";
-import { PHONE, PHONE_DISPLAY } from "@/lib/contact";
+import { Menu, X } from "lucide-react";
 
 const logo = "/assets/logo.jpg";
 
@@ -61,6 +60,12 @@ export function Navbar() {
 
         <div className="flex items-center gap-2.5">
           <a
+            href="/drivers/register"
+            className="hidden rounded-full bg-gold px-4 py-2 text-xs font-bold text-charcoal shadow-gold transition-all duration-200 hover:brightness-110 md:inline-flex"
+          >
+            Driver Register
+          </a>
+          <a
             href="/drivers/login"
             className={`hidden rounded-full px-4 py-2 text-xs font-semibold transition-all duration-200 md:inline-flex ${
               scrolled
@@ -79,13 +84,6 @@ export function Navbar() {
             }`}
           >
             Calculate Fare
-          </a>
-          <a
-            href={`tel:${PHONE}`}
-            className="hidden items-center gap-2 rounded-full bg-gold px-5 py-2.5 text-sm font-bold text-charcoal shadow-gold transition-all duration-200 hover:brightness-110 sm:inline-flex"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            {PHONE_DISPLAY}
           </a>
           <button
             onClick={() => setOpen(!open)}
@@ -119,6 +117,12 @@ export function Navbar() {
               ))}
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <a
+                  href="/drivers/register"
+                  className="inline-flex items-center justify-center rounded-xl bg-gold px-4 py-3 text-sm font-bold text-charcoal shadow-gold"
+                >
+                  Driver Register
+                </a>
+                <a
                   href="/drivers/login"
                   className="inline-flex items-center justify-center rounded-xl border border-gold/40 px-4 py-3 text-sm font-semibold text-charcoal transition-colors hover:bg-gold/10"
                 >
@@ -129,12 +133,6 @@ export function Navbar() {
                   className="inline-flex items-center justify-center rounded-xl border border-charcoal/15 px-4 py-3 text-sm font-semibold text-charcoal transition-colors hover:bg-charcoal hover:text-white"
                 >
                   Calculate Fare
-                </a>
-                <a
-                  href={`tel:${PHONE}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold px-4 py-3 text-sm font-bold text-charcoal shadow-gold"
-                >
-                  <Phone className="h-4 w-4" /> Call
                 </a>
               </div>
             </div>
